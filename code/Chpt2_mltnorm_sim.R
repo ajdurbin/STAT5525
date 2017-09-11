@@ -43,24 +43,47 @@ for (i in 1:nrow(my_data)) {
   
 }
 
-# make class and subclass a factor for plotting
-# centroids$class = as.factor(centroids$class)
-# my_data$class = as.factor(my_data$class)
-# my_data$subclass = as.factor(my_data$subclass)
-
 # plot data by class
-# ggplot(data = my_data) +
-#   geom_point(mapping = aes(x = x1, y = x2, color = class)) +
-#   stat_smooth(mapping = aes(x = x1, y = x2), method = 'lm', se = FALSE,
-#               fullrange = TRUE)
+ggplot(data = my_data) +
+  geom_point(mapping = aes(x = x1, y = x2, color = factor(class))) +
+  theme(legend.title=element_blank())
 
 
 
 # linear model using x1, x2 to predict 0,1 response
 lmfit <- lm(class ~ x1 + x2, data = my_data)
 
+# create model matrix
 tmp <- my_data %>% 
   dplyr::select(x1, x2) %>% 
   mutate(intercept = rep(1, nrow(my_data))) %>% 
   dplyr::select(intercept, x1, x2)
 
+# predicted values
+my_data$yhat <- as.matrix(tmp) %*% coefficients(lmfit)
+
+# encoding of classes
+my_data <- my_data %>% 
+  mutate(pred_class = ifelse(yhat > 0.5, 1, 0))
+
+
+# Get terms for confusion matrix as in HW0
+
+a <- my_data %>% 
+  filter(class == 0, pred_class == 0)
+a <- nrow(a)
+
+b <- my_data %>% 
+  filter(class == 0, pred_class == 1)
+b <- nrow(b)
+
+c <- my_data %>% 
+  filter(class == 1, pred_class == 0)
+c <- nrow(c)
+
+d <- my_data %>% 
+  filter(class == 1, pred_class == 1)
+d <- nrow(d)
+
+f_pos <- b / (a + b)
+f_neg <- c / (c + d)
