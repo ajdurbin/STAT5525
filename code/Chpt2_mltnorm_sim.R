@@ -7,7 +7,7 @@ rm(list = ls())
 library(tidyverse)
 library(MASS)
 
-set.seed(1127)
+set.seed(131)
 
 # generate centroids
 mu <- c(1, 0)
