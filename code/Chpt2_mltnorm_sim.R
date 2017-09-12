@@ -43,13 +43,6 @@ for (i in 1:nrow(my_data)) {
   
 }
 
-# plot data by class
-ggplot(data = my_data) +
-  geom_point(mapping = aes(x = x1, y = x2, color = factor(class))) +
-  theme(legend.title=element_blank())
-
-
-
 # linear model using x1, x2 to predict 0,1 response
 lmfit <- lm(class ~ x1 + x2, data = my_data)
 
@@ -66,6 +59,22 @@ my_data$yhat <- as.matrix(tmp) %*% coefficients(lmfit)
 my_data <- my_data %>% 
   mutate(pred_class = ifelse(yhat > 0.5, 1, 0))
 
+my_data <- my_data %>% 
+  mutate(x1_seq = seq(min(x1), max(x1), length.out = nrow(my_data))) %>% 
+  mutate(x2_seq = (0.5 - coefficients(lmfit)[1] - coefficients(lmfit)[2] * x1_seq) / coefficients(lmfit)[3])
+
+# plot data by class
+ggplot(data = my_data) +
+  geom_point(mapping = aes(x = x1, y = x2, color = factor(class))) +
+  theme(legend.title=element_blank()) +
+  ggtitle('TRUTH') +
+  geom_line(mapping = aes(x = x1_seq, y = x2_seq))
+
+ggplot(data = my_data) +
+  geom_point(mapping = aes(x = x1, y = x2, color = factor(pred_class))) +
+  theme(legend.title=element_blank()) +
+  ggtitle('PREDICTED') +
+  geom_line(mapping = aes(x = x1_seq, y = x2_seq))
 
 # Get terms for confusion matrix as in HW0
 
