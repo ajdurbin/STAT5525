@@ -228,9 +228,9 @@ d <- my_data %>%
 f_pos_bayes <- b / (a + b)
 f_neg_bayes <- c / (c + d)
 
-my_data %>% 
+boundary_points <- my_data %>% 
   filter((class_1_probs - class_2_probs) < 1e-5)
-# 45 things close together
+# this gives points close together
 
 ggplot(data = my_data) +
   geom_point(mapping = aes(x = x1, y = x2, color = factor(bayes_pred_class))) +
