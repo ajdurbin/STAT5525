@@ -7,7 +7,7 @@ rm(list = ls())
 library(tidyverse)
 library(MASS)
 
-set.seed(11271992)
+set.seed(12)
 
 
 # Generate Data -----------------------------------------------------------
@@ -74,13 +74,17 @@ ggplot(data = my_data) +
   geom_point(mapping = aes(x = x1, y = x2, color = factor(class))) +
   theme(legend.title=element_blank()) +
   ggtitle('TRUTH') +
-  geom_line(mapping = aes(x = x1_seq, y = x2_seq))
+  geom_line(mapping = aes(x = x1_seq, y = x2_seq)) +
+  ylim(min(my_data$x2), max(my_data$x2)) +
+  xlim(min(my_data$x1), max(my_data$x2))
 
 ggplot(data = my_data) +
   geom_point(mapping = aes(x = x1, y = x2, color = factor(pred_class_reg))) +
   theme(legend.title=element_blank()) +
   ggtitle('LINEAR REGRESSION PREDICTED') +
-  geom_line(mapping = aes(x = x1_seq, y = x2_seq))
+  geom_line(mapping = aes(x = x1_seq, y = x2_seq)) +
+  ylim(min(my_data$x2), max(my_data$x2)) +
+  xlim(min(my_data$x1), max(my_data$x1))
 
 # Get terms for confusion matrix as in HW0
 
@@ -230,4 +234,6 @@ my_data %>%
 ggplot(data = my_data) +
   geom_point(mapping = aes(x = x1, y = x2, color = factor(bayes_pred_class))) +
   theme(legend.title=element_blank()) +
-  ggtitle('BAYES PREDICTED')
+  ggtitle('BAYES PREDICTED') +
+  ylim(min(my_data$x2), max(my_data$x2))
+  xlim(min(my_data$x1), max(my_data$x1))
