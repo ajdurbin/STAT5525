@@ -9,6 +9,9 @@ library(MASS)
 
 set.seed(131)
 
+
+# Generate Data -----------------------------------------------------------
+
 # generate centroids
 mu <- c(1, 0)
 sigma <- diag(1, nrow = 2)
@@ -42,6 +45,9 @@ for (i in 1:nrow(my_data)) {
   my_data$subclass[i] = row_index
   
 }
+
+
+# Least squares classification and error rates ----------------------------
 
 # linear model using x1, x2 to predict 0,1 response
 lmfit <- lm(class ~ x1 + x2, data = my_data)
@@ -96,3 +102,39 @@ d <- nrow(d)
 
 f_pos <- b / (a + b)
 f_neg <- c / (c + d)
+
+
+# Optimal separating boundary ---------------------------------------------
+
+x1_seq <- seq(min(my_data$x1), max(my_data$x1), by = 0.01)
+x2_seq <- seq(min(my_data$x2), max(my_data$x2), length.out = length(x1_seq))
+seq_mat <- cbind(x1_seq, x2_seq)
+
+norm_den <- function(vec, cent){
+  
+  diff <- vec - cent
+  diff <- as.matrix(diff)
+  thing <- exp((-5 / 2) * diff %*% t(diff))
+  return(thing)
+  
+}
+
+c1_num <- matrix(data = 0, ncol = 5, nrow = length(x1_seq))
+c1_den <- matrix(data = 0, ncol = 10, nrow = length(x1_seq))
+
+for(i in 1:5){
+  c1_num[, i] <- apply(seq_mat, 1, function(g) norm_den(g, centroids[i, 1:2]))
+}
+
+for(i in 1:10){
+  c1_den[, i] <- apply(seq_mat, 1, function(g) norm_den(g, centroids[i, 1:2]))
+}
+
+c1_num <- apply(c1_num, 1, sum)
+c1_den <- apply(c1_den, 1, sum)
+
+seq_mat <- as.tibble(seq_mat) %>%
+  mutate(class_1_probs = c1_num/c1_den) %>% 
+  mutate(class_2_probs = 1 -class_1_probs)
+  
+
