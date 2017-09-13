@@ -6,8 +6,9 @@ rm(list = ls())
 
 library(tidyverse)
 library(MASS)
+library(mvtnorm)
 
-set.seed(12)
+set.seed(123)
 
 
 # Generate Data -----------------------------------------------------------
@@ -75,16 +76,16 @@ ggplot(data = my_data) +
   theme(legend.title=element_blank()) +
   ggtitle('TRUTH') +
   geom_line(mapping = aes(x = x1_seq, y = x2_seq)) +
-  ylim(min(my_data$x2), max(my_data$x2)) +
-  xlim(min(my_data$x1), max(my_data$x2))
+  ylim(-5, 5) +
+  xlim(-5, 5)
 
 ggplot(data = my_data) +
   geom_point(mapping = aes(x = x1, y = x2, color = factor(pred_class_reg))) +
   theme(legend.title=element_blank()) +
   ggtitle('LINEAR REGRESSION PREDICTED') +
   geom_line(mapping = aes(x = x1_seq, y = x2_seq)) +
-  ylim(min(my_data$x2), max(my_data$x2)) +
-  xlim(min(my_data$x1), max(my_data$x1))
+  ylim(-5, 5) +
+  xlim(-5, 5)
 
 # Get terms for confusion matrix as in HW0
 
@@ -235,5 +236,6 @@ ggplot(data = my_data) +
   geom_point(mapping = aes(x = x1, y = x2, color = factor(bayes_pred_class))) +
   theme(legend.title=element_blank()) +
   ggtitle('BAYES PREDICTED') +
-  ylim(min(my_data$x2), max(my_data$x2))
-  xlim(min(my_data$x1), max(my_data$x1))
+  ylim(-5, 5) +
+  xlim(-5, 5)
+
