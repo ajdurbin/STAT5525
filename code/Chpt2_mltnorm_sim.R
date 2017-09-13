@@ -79,7 +79,7 @@ ggplot(data = my_data) +
 ggplot(data = my_data) +
   geom_point(mapping = aes(x = x1, y = x2, color = factor(pred_class_reg))) +
   theme(legend.title=element_blank()) +
-  ggtitle('PREDICTED') +
+  ggtitle('LINEAR REGRESSION PREDICTED') +
   geom_line(mapping = aes(x = x1_seq, y = x2_seq))
 
 # Get terms for confusion matrix as in HW0
@@ -226,3 +226,8 @@ f_neg_bayes <- c / (c + d)
 my_data %>% 
   filter((class_1_probs - class_2_probs) < 1e-5)
 # 45 things close together
+
+ggplot(data = my_data) +
+  geom_point(mapping = aes(x = x1, y = x2, color = factor(bayes_pred_class))) +
+  theme(legend.title=element_blank()) +
+  ggtitle('BAYES PREDICTED')
