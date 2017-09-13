@@ -7,7 +7,7 @@ rm(list = ls())
 library(tidyverse)
 library(MASS)
 
-set.seed(131)
+set.seed(12345)
 
 
 # Generate Data -----------------------------------------------------------
@@ -85,20 +85,20 @@ ggplot(data = my_data) +
 # Get terms for confusion matrix as in HW0
 
 a <- my_data %>% 
-  filter(class == 0, pred_class == 0)
-a <- nrow(a)
+  filter(class == 0, pred_class == 0) %>% 
+  nrow()
 
 b <- my_data %>% 
-  filter(class == 0, pred_class == 1)
-b <- nrow(b)
+  filter(class == 0, pred_class == 1) %>% 
+  nrow()
 
 c <- my_data %>% 
-  filter(class == 1, pred_class == 0)
-c <- nrow(c)
+  filter(class == 1, pred_class == 0) %>% 
+  nrow()
 
 d <- my_data %>% 
-  filter(class == 1, pred_class == 1)
-d <- nrow(d)
+  filter(class == 1, pred_class == 1) %>% 
+  nrow()
 
 f_pos <- b / (a + b)
 f_neg <- c / (c + d)
@@ -106,10 +106,12 @@ f_neg <- c / (c + d)
 
 # Optimal separating boundary ---------------------------------------------
 
+# generate sequences for calculating class probabilities and plotting
 x1_seq <- seq(min(my_data$x1), max(my_data$x1), by = 0.01)
 x2_seq <- seq(min(my_data$x2), max(my_data$x2), length.out = length(x1_seq))
 seq_mat <- cbind(x1_seq, x2_seq)
 
+# function to compute the normal density given data and centroid
 norm_den <- function(vec, cent){
   
   diff <- vec - cent
@@ -119,22 +121,39 @@ norm_den <- function(vec, cent){
   
 }
 
+# class 1 numerator and denominator storage
 c1_num <- matrix(data = 0, ncol = 5, nrow = length(x1_seq))
 c1_den <- matrix(data = 0, ncol = 10, nrow = length(x1_seq))
 
+# loop through the centroids and fill each column of c1_num with the density
+# for that particular centroid
 for(i in 1:5){
   c1_num[, i] <- apply(seq_mat, 1, function(g) norm_den(g, centroids[i, 1:2]))
 }
 
+# do the same except for all 10 centroids
 for(i in 1:10){
   c1_den[, i] <- apply(seq_mat, 1, function(g) norm_den(g, centroids[i, 1:2]))
 }
 
+# now sum across the rows
 c1_num <- apply(c1_num, 1, sum)
 c1_den <- apply(c1_den, 1, sum)
 
+# make a dataframe and add column of the probabilities derived in class
+# make a new column of 1 - class 1 probs = class 2 probs
 seq_mat <- as.tibble(seq_mat) %>%
   mutate(class_1_probs = c1_num/c1_den) %>% 
-  mutate(class_2_probs = 1 -class_1_probs)
+  mutate(class_2_probs = 1 - class_1_probs)
   
+# find observations where class probabilites are approximately equal
+seq_mat <- seq_mat %>% 
+  filter(abs(class_1_probs - class_2_probs) < 5e-2)
 
+# failed plot attempt
+ggplot() +
+  geom_point(data = my_data, mapping = aes(x = x1, y = x2, color = factor(class))) +
+  theme(legend.title=element_blank()) +
+  ggtitle('TRUTH') +
+  geom_curve(data = seq_mat, mapping = aes(x = x1_seq, y = x2_seq, xend = min(my_data$x1), yend = min(my_data$x2)))
+  
