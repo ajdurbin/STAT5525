@@ -7,6 +7,7 @@ rm(list = ls())
 library(tidyverse)
 library(MASS)
 library(mvtnorm)
+library(mnormt)
 
 set.seed(1)
 
@@ -297,7 +298,7 @@ plot(grid[, 1],
      xlim = c(-5, 5),
      ylim = c(-5, 5),
      main = "Optimal Bayes Classifier Decision Boundary"
-)
+    )
 
 
 values1 <- my_data %>% 
