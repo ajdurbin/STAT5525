@@ -72,16 +72,16 @@ my_data <- my_data %>%
   mutate(x2_seq = (0.5 - coefficients(lmfit)[1] - coefficients(lmfit)[2] * x1_seq) / coefficients(lmfit)[3])
 
 # plot data by class
-ggplot(data = my_data) +
-  geom_point(mapping = aes(x = x1, y = x2, color = factor(class))) +
-  theme(legend.title=element_blank()) +
-  ggtitle('TRUTH') +
-  geom_line(mapping = aes(x = x1_seq, y = x2_seq)) +
-  ylim(-5, 5) +
-  xlim(-5, 5)
+# ggplot(data = my_data) +
+#   geom_point(mapping = aes(x = x1, y = x2, color = factor(class))) +
+#   theme(legend.title=element_blank()) +
+#   ggtitle('TRUTH') +
+#   geom_line(mapping = aes(x = x1_seq, y = x2_seq)) +
+#   ylim(-5, 5) +
+#   xlim(-5, 5)
 
 ggplot(data = my_data) +
-  geom_point(mapping = aes(x = x1, y = x2, color = factor(pred_class_reg))) +
+  geom_point(mapping = aes(x = x1, y = x2, color = factor(class))) +
   theme(legend.title=element_blank()) +
   ggtitle('LINEAR REGRESSION PREDICTED') +
   geom_line(mapping = aes(x = x1_seq, y = x2_seq)) +
@@ -323,3 +323,147 @@ contour(x = grid.vector1,
         lwd = 1,
         add = TRUE
         )
+
+# kmeans to separate data using subclasses --------------------------------
+
+class_1 <- my_data %>% 
+  filter(class == 0)
+
+class_2 <- my_data %>% 
+  filter(class == 1)
+
+kclass1 <- kmeans(class_1[, 1:2], centers = 5)
+kclass2 <- kmeans(class_2[, 1:2], centers = 5)
+
+# ggplot() +
+#   geom_point(data = as.tibble(kclass1$centers), mapping = aes(x = x1, y = x2, color = 'Class 1 Predicted')) +
+#   geom_point(data = as.tibble(kclass2$centers), mapping = aes(x = x1, y = x2, color = 'Class 2 Predicted')) +
+#   ylim(-5, 5) +
+#   xlim(-5, 5) +
+#   scale_color_manual(values = c('blue', 'red', 'green', 'orange')) +
+#   theme(legend.title=element_blank()) +
+#   ggtitle('kMeans Centers Predicted VS Truth') +
+#   geom_point(data = centroids[1:5, ], mapping = aes(x = x1, y = x2, color = 'Class 1')) +
+#   geom_point(data = centroids[6:10, ], mapping = aes(x = x1, y = x2, color = 'Class 2'))
+
+k_centroids1 <- tibble(x1 = kclass1$centers[, 1], x2 = kclass1$centers[, 2], class = rep(0, 5))
+k_centroids2 <- tibble(x1 = kclass2$centers[, 1], x2 = kclass2$centers[, 2], class = rep(1, 5))
+k_centroids <- rbind(k_centroids1, k_centroids2)
+  
+
+# kmeans to get subclass means, then do bayes optimal classifier ----------
+
+c1_num <- matrix(data = 0, ncol = 5, nrow = nrow(my_data))
+c1_den <- matrix(data = 0, ncol = 10, nrow = nrow(my_data))
+
+# loop through the centroids and fill each column of c1_num with the density
+# for that particular centroid
+for(i in 1:5){
+  # c1_num[, i] <- apply(seq_mat, 1, function(g) norm_den(g, centroids[i, 1:2]))
+  c1_num[, i] <- apply(
+    as.matrix(my_data[, 1:2]), 1,
+    function(g) dmvnorm(x = g, mean = as.matrix(k_centroids[i, 1:2]), sigma = diag(1/5, nrow = 2))
+  )
+}
+
+# do the same except for all 10 centroids
+for(i in 1:10){
+  # c1_den[, i] <- apply(seq_mat, 1, function(g) norm_den(g, centroids[i, 1:2]))
+  c1_den[, i] <- apply(
+    as.matrix(my_data[, 1:2]), 1,
+    function(g) dmvnorm(x = g, mean = as.matrix(k_centroids[i, 1:2]), sigma = diag(1/5, nrow = 2))
+  )
+}
+
+# now sum across the rows
+c1_num <- apply(c1_num, 1, sum)
+c1_den <- apply(c1_den, 1, sum)
+
+# make a dataframe and add column of the probabilities derived in class
+# make a new column of 1 - class 1 probs = class 2 probs
+my_data <- my_data %>%
+  mutate(kclass_1_probs = c1_num/c1_den) %>% 
+  mutate(kclass_2_probs = 1 - class_1_probs) %>% 
+  mutate(kbayes_pred_class = ifelse(class_1_probs > class_2_probs, 0, 1))
+
+# create grid of points
+# grid.vector1 = seq(min(my_data$x1), max(my_data$x1), 0.1)
+# grid.vector2 = seq(min(my_data$x2), max(my_data$x2), 0.1)
+grid.vector1 = seq(-5, 5, by = 0.1)
+grid.vector2 = seq(-5, 5, by = 0.1)
+grid = expand.grid(grid.vector1, grid.vector2)
+
+#calculate density for each point on grid for each of the multivariates distributions
+kprob.1 = matrix(0:0, nrow = nrow(grid), ncol = 5) #initialize grid
+for (i in 1:nrow(grid)){
+  for (j in 1:5){
+    kprob.1[i, j] = dmnorm(grid[i, ], k_centroids[j, 1:2], diag(1/5, nrow = 2))  
+  }
+}
+kprob.1
+kprob1.max = apply(kprob.1, 1, max)
+
+#second class - as per above
+kprob.2 = matrix(0:0, nrow = nrow(grid), ncol = 5) #initialize grid
+for (i in 1:nrow(grid)){
+  for (j in 6:10){
+    kprob.2[i, j - 5] = dmnorm(grid[i, ], k_centroids[j, 1:2], diag(1/5, nrow = 2))  
+  }
+}
+kprob.2
+kprob2.max = apply(kprob.2, 1, max)
+
+
+kprob.total = cbind(kprob1.max, kprob2.max)
+class = rep(1, times = length(kprob1.max))
+class[kprob1.max < kprob2.max] = 2
+cbind(kprob.total, class)
+
+# plot(grid[, 1], 
+#      grid[, 2],
+#      pch = ".", 
+#      cex = 2,
+#      col = ifelse(class == 1, "coral", "cornflowerblue"),
+#      xlab = "x1",
+#      ylab = "x2",
+#      main = "Optimal Bayes Classifier Decision Boundary
+#      # xlim = c(-5, 5),
+#      # ylim = c(-5, 5)
+#     )
+
+plot(grid[, 1], 
+     grid[, 2],
+     pch = ".", 
+     cex = 2,
+     col = ifelse(class == 1, "coral", "cornflowerblue"),
+     xlab = "x1",
+     ylab = "x2",
+     xlim = c(-5, 5),
+     ylim = c(-5, 5),
+     main = "kMeans Optimal Bayes Classifier Decision Boundary"
+    )
+
+
+values1 <- my_data %>% 
+  filter(class == 0)
+
+values2 <- my_data %>% 
+  filter(class == 1)
+
+points(values1, col = "coral")
+points(values2, col = "cornflowerblue") 
+
+kprob.bayes <- matrix(kprob1.max / (kprob1.max + kprob2.max),
+                     length(grid.vector1),
+                     length(grid.vector2)
+                    )
+
+contour(x = grid.vector1, 
+        y = grid.vector2,
+        z = kprob.bayes, 
+        levels = 0.5, 
+        labels = "", 
+        lwd = 1,
+        add = TRUE
+        )
+
