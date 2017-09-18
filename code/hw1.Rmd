@@ -1,19 +1,32 @@
-# Chapter 2 Normal Mixture Models Simulation
-# Alexander Durbin
-# Worry about optimization later
+---
+title: "Homework 1"
+subtitle: 'STAT5525: Data Analytics'
+author: "Alexander Durbin"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: html_document
+---
 
-rm(list = ls())
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, cache = FALSE, eval = TRUE)
+```
+
+
+```{r, include=FALSE}
 
 library(tidyverse)
 library(MASS)
 library(mvtnorm)
 library(mnormt)
+set.seed(1)
 
-set.seed(2)
+```
 
+# Problem 1
 
-# Generate Data -----------------------------------------------------------
+## Part A
 
+```{r, fig.cap="Simulated data from normal mixture models."}
+  
 # generate centroids
 mu <- c(1, 0)
 sigma <- diag(1, nrow = 2)
@@ -48,8 +61,21 @@ for (i in 1:nrow(my_data)) {
   
 }
 
+# plot data by class
+ggplot(data = my_data) +
+  geom_point(mapping = aes(x = x1, y = x2, shape = factor(class))) +
+  theme(legend.title=element_blank()) +
+  ggtitle('TRUTH') +
+  ylim(-5, 5) +
+  xlim(-5, 5) +
+  theme_bw()
 
-# Least squares classification and error rates ----------------------------
+
+```
+
+## Part B
+
+```{r, fig.cap='Linear separating boundary using least squares.', warning=FALSE}
 
 # linear model using x1, x2 to predict 0,1 response
 lmfit <- lm(class ~ x1 + x2, data = my_data)
@@ -71,24 +97,19 @@ my_data <- my_data %>%
   mutate(x1_seq = seq(min(x1), max(x1), length.out = nrow(my_data))) %>% 
   mutate(x2_seq = (0.5 - coefficients(lmfit)[1] - coefficients(lmfit)[2] * x1_seq) / coefficients(lmfit)[3])
 
-# plot data by class
-# ggplot(data = my_data) +
-#   geom_point(mapping = aes(x = x1, y = x2, color = factor(class))) +
-#   theme(legend.title=element_blank()) +
-#   ggtitle('TRUTH') +
-#   geom_line(mapping = aes(x = x1_seq, y = x2_seq)) +
-#   ylim(-5, 5) +
-#   xlim(-5, 5)
-
 ggplot(data = my_data) +
-  geom_point(mapping = aes(x = x1, y = x2, color = factor(class))) +
+  geom_point(mapping = aes(x = x1, y = x2, shape = factor(class))) +
   theme(legend.title=element_blank()) +
-  ggtitle('LINEAR REGRESSION PREDICTED') +
+  ggtitle('LINEAR REGRESSION BOUNDARY') +
   geom_line(mapping = aes(x = x1_seq, y = x2_seq)) +
   ylim(-5, 5) +
-  xlim(-5, 5)
+  xlim(-5, 5) +
+  theme_bw()
 
-# Get terms for confusion matrix as in HW0
+```
+
+
+```{r}
 
 a <- my_data %>% 
   filter(class == 0, pred_class_reg == 0) %>% 
@@ -106,74 +127,35 @@ d <- my_data %>%
   filter(class == 1, pred_class_reg == 1) %>% 
   nrow()
 
+knitr::kable(as.data.frame(matrix(data = c(a, b, c, d),nrow = 2), row.names = c('True 0', 'True 1')), col.names = c('Predicted 0', 'Predicted 1'), caption = 'Confusion matrix for linear separating boundary using least squares.')
+
 f_pos_reg <- b / (a + b)
 f_neg_reg <- c / (c + d)
 
+paste0('The false positive rate is ', f_pos_reg)
+paste0('The false negative rate is ', f_neg_reg)
 
-# Optimal separating boundary for sequence data ---------------------------------------------
+```
 
-# generate sequences for calculating class probabilities and plotting
-# x1_seq <- seq(min(my_data$x1), max(my_data$x1), by = 0.01)
-# x2_seq <- seq(min(my_data$x2), max(my_data$x2), length.out = length(x1_seq))
-# seq_mat <- cbind(x1_seq, x2_seq)
+# Problem 2
 
-# function to compute the normal density given data and centroid
-# consider using dmvtnorm instead
-# norm_den <- function(vec, cent){
-#   
-#   diff <- vec - cent
-#   diff <- as.matrix(diff)
-#   thing <- exp((-5 / 2) * diff %*% t(diff))
-#   return(thing)
-#   
-# }
+We derive the optimal Bayes separating boundary by optimizing the posterior distribution, $Pr(G_k | X)$. Because we know how the data were generated, $Pr(x | G_k)$, we use Bayes Rule for optimization. We show $Pr(G_k = 1 | X)$ and then use Total Law of Probability to see $Pr(G_k = 2 | X) = 1 - Pr(G_k = 1 | X)$.
 
-# class 1 numerator and denominator storage
-# c1_num <- matrix(data = 0, ncol = 5, nrow = length(x1_seq))
-# c1_den <- matrix(data = 0, ncol = 10, nrow = length(x1_seq))
+\begin{align*} Pr(G_k = 1| X) &= \frac{Pr(X = 1 | G_k) Pr(G_k)}{Pr(X)} \\
 
-# loop through the centroids and fill each column of c1_num with the density
-# for that particular centroid
-# for(i in 1:5){
-#   # c1_num[, i] <- apply(seq_mat, 1, function(g) norm_den(g, centroids[i, 1:2]))
-#   c1_num[, i] <- apply(
-#     seq_mat, 1,
-#     function(g) dmvnorm(x = g, mean = as.matrix(centroids[i, 1:2]), sigma = diag(1/5, nrow = 2))
-#   )
-# }
-# 
-# # do the same except for all 10 centroids
-# for(i in 1:10){
-#   # c1_den[, i] <- apply(seq_mat, 1, function(g) norm_den(g, centroids[i, 1:2]))
-#   c1_den[, i] <- apply(
-#     seq_mat, 1,
-#     function(g) dmvnorm(x = g, mean = as.matrix(centroids[i, 1:2]), sigma = diag(1/5, nrow = 2))
-#   )
-# }
-# 
-# # now sum across the rows
-# c1_num <- apply(c1_num, 1, sum)
-# c1_den <- apply(c1_den, 1, sum)
-# 
-# # make a dataframe and add column of the probabilities derived in class
-# # make a new column of 1 - class 1 probs = class 2 probs
-# seq_mat <- as.tibble(seq_mat) %>%
-#   mutate(class_1_probs = c1_num/c1_den) %>% 
-#   mutate(class_2_probs = 1 - class_1_probs)
-#   
-# # find observations where class probabilites are approximately equal
-# seq_mat <- seq_mat %>% 
-#   filter(abs(class_1_probs - class_2_probs) < 5e-2)
-# 
-# # failed plot attempt
-# ggplot() +
-#   geom_point(data = my_data, mapping = aes(x = x1, y = x2, color = factor(class))) +
-#   theme(legend.title=element_blank()) +
-#   ggtitle('TRUTH') +
-#   geom_curve(data = seq_mat, mapping = aes(x = x1_seq, y = x2_seq, xend = min(my_data$x1), yend = min(my_data$x2)))
-#   
+&= \frac{\sum_{k = 1}^{5} \pi_k N(x | m_k, \frac{I}{5}) \times \frac{1}{2}}{\sum_{k = 1}^{5} \pi_k N(x | m_k, \frac{I}{5}) \times \frac{1}{2} + \sum_{k = 6}^{10} \pi_k N(x | m_k, \frac{I}{5}) \times \frac{1}{2}} \\
 
-# Bayes Optimal Classifier for true data ----------------------------------
+&= \frac{\sum_{k = 1}^{5} \frac{1}{5} N(x | m_k, \frac{I}{5}) \times \frac{1}{2}}{\sum_{k = 1}^{5} \frac{1}{5} N(x | m_k, \frac{I}{5}) \times \frac{1}{2} + \sum_{k = 6}^{10} \frac{1}{5} N(x | m_k, \frac{I}{5}) \times \frac{1}{2}} \\ 
+
+&= \frac{\sum_{k = 1}^{5} N(x | m_k, \frac{I}{5}) }{\sum_{k = 1}^{5} N(x | m_k, \frac{I}{5}) + \sum_{k = 6}^{10} N(x | m_k, \frac{I}{5})} \\
+
+\end{align*}
+
+We then assign class label based on whichever class has the larger probability.
+
+# Problem 3
+
+```{r, fig.cap='Bayes optimal separating boundary.'}
 
 c1_num <- matrix(data = 0, ncol = 5, nrow = nrow(my_data))
 c1_den <- matrix(data = 0, ncol = 10, nrow = nrow(my_data))
@@ -208,7 +190,81 @@ my_data <- my_data %>%
   mutate(class_2_probs = 1 - class_1_probs) %>% 
   mutate(bayes_pred_class = ifelse(class_1_probs > class_2_probs, 0, 1))
 
-# Get terms for confusion matrix as in HW0
+
+
+
+# PLOT BAYES SEPARATING BOUNDARY
+# create grid of points
+# grid.vector1 = seq(min(my_data$x1), max(my_data$x1), 0.1)
+# grid.vector2 = seq(min(my_data$x2), max(my_data$x2), 0.1)
+grid.vector1 = seq(-5, 5, by = 0.1)
+grid.vector2 = seq(-5, 5, by = 0.1)
+grid = expand.grid(grid.vector1, grid.vector2)
+
+#calculate density for each point on grid for each of the multivariates distributions
+prob.1 = matrix(0:0, nrow = nrow(grid), ncol = 5) #initialize grid
+for (i in 1:nrow(grid)){
+  for (j in 1:5){
+    prob.1[i, j] = dmnorm(grid[i, ], centroids[j, 1:2], diag(1/5, nrow = 2))  
+  }
+}
+prob1.max = apply(prob.1, 1, max)
+
+#second class - as per above
+prob.2 = matrix(0:0, nrow = nrow(grid), ncol = 5) #initialize grid
+for (i in 1:nrow(grid)){
+  for (j in 6:10){
+    prob.2[i, j - 5] = dmnorm(grid[i, ], centroids[j, 1:2], diag(1/5, nrow = 2))  
+  }
+}
+prob2.max = apply(prob.2, 1, max)
+
+
+prob.total = cbind(prob1.max, prob2.max)
+class = rep(1, times = length(prob1.max))
+class[prob1.max < prob2.max] = 2
+invisible(cbind(prob.total, class))
+
+
+plot(grid[, 1], 
+     grid[, 2],
+     pch = ".", 
+     cex = 2,
+     col = ifelse(class == 1, "white", "white"),
+     xlab = "x1",
+     ylab = "x2",
+     xlim = c(-5, 5),
+     ylim = c(-5, 5),
+     main = "Optimal Bayes Classifier Decision Boundary"
+    )
+
+
+values1 <- my_data %>% 
+  filter(class == 0)
+
+values2 <- my_data %>% 
+  filter(class == 1)
+
+points(values1, pch = 16)
+points(values2, pch = 17) 
+
+prob.bayes <- matrix(prob1.max / (prob1.max + prob2.max),
+                     length(grid.vector1),
+                     length(grid.vector2)
+                    )
+
+contour(x = grid.vector1, 
+        y = grid.vector2,
+        z = prob.bayes, 
+        levels = 0.5, 
+        labels = "", 
+        lwd = 1,
+        add = TRUE
+        )
+
+```
+
+```{r}
 
 a <- my_data %>% 
   filter(class == 0, bayes_pred_class == 0) %>% 
@@ -229,102 +285,18 @@ d <- my_data %>%
 f_pos_bayes <- b / (a + b)
 f_neg_bayes <- c / (c + d)
 
-my_data %>% 
-  filter((class_1_probs - class_2_probs) < 1e-5)
-# 45 things close together
+knitr::kable(as.data.frame(matrix(data = c(a, b, c, d),nrow = 2), row.names = c('True 0', 'True 1')), col.names = c('Predicted 0', 'Predicted 1'), caption = 'Confusion matrix for optimal Bayes separating boundary.')
 
-ggplot(data = my_data) +
-  geom_point(mapping = aes(x = x1, y = x2, color = factor(bayes_pred_class))) +
-  theme(legend.title=element_blank()) +
-  ggtitle('BAYES PREDICTED') +
-  ylim(-5, 5) +
-  xlim(-5, 5)
+paste0('The false positive rate is ', f_pos_bayes)
+paste0('The false negative rate is ', f_neg_bayes)
 
+```
 
-# Bayes Decision boundary plot --------------------------------------------
+# Problem 4
 
-# create grid of points
-# grid.vector1 = seq(min(my_data$x1), max(my_data$x1), 0.1)
-# grid.vector2 = seq(min(my_data$x2), max(my_data$x2), 0.1)
-grid.vector1 = seq(-5, 5, by = 0.1)
-grid.vector2 = seq(-5, 5, by = 0.1)
-grid = expand.grid(grid.vector1, grid.vector2)
+Having previous knowledge of the superclass labels and knowing that there are five subclasses for each superclass, we use *k*-means to estimate the five means for each superclass and then perform the Bayes optimal classification procedure outlined in Problem 2 and Problem 3.
 
-#calculate density for each point on grid for each of the multivariates distributions
-prob.1 = matrix(0:0, nrow = nrow(grid), ncol = 5) #initialize grid
-for (i in 1:nrow(grid)){
-  for (j in 1:5){
-    prob.1[i, j] = dmnorm(grid[i, ], centroids[j, 1:2], diag(1/5, nrow = 2))  
-  }
-}
-prob.1
-prob1.max = apply(prob.1, 1, max)
-
-#second class - as per above
-prob.2 = matrix(0:0, nrow = nrow(grid), ncol = 5) #initialize grid
-for (i in 1:nrow(grid)){
-  for (j in 6:10){
-    prob.2[i, j - 5] = dmnorm(grid[i, ], centroids[j, 1:2], diag(1/5, nrow = 2))  
-  }
-}
-prob.2
-prob2.max = apply(prob.2, 1, max)
-
-
-prob.total = cbind(prob1.max, prob2.max)
-class = rep(1, times = length(prob1.max))
-class[prob1.max < prob2.max] = 2
-cbind(prob.total, class)
-
-# plot(grid[, 1], 
-#      grid[, 2],
-#      pch = ".", 
-#      cex = 2,
-#      col = ifelse(class == 1, "coral", "cornflowerblue"),
-#      xlab = "x1",
-#      ylab = "x2",
-#      main = "Optimal Bayes Classifier Decision Boundary
-#      # xlim = c(-5, 5),
-#      # ylim = c(-5, 5)
-#     )
-
-plot(grid[, 1], 
-     grid[, 2],
-     pch = ".", 
-     cex = 2,
-     col = ifelse(class == 1, "coral", "cornflowerblue"),
-     xlab = "x1",
-     ylab = "x2",
-     xlim = c(-5, 5),
-     ylim = c(-5, 5),
-     main = "Optimal Bayes Classifier Decision Boundary"
-    )
-
-
-values1 <- my_data %>% 
-  filter(class == 0)
-
-values2 <- my_data %>% 
-  filter(class == 1)
-
-points(values1, col = "coral")
-points(values2, col = "cornflowerblue") 
-
-prob.bayes <- matrix(prob1.max / (prob1.max + prob2.max),
-                     length(grid.vector1),
-                     length(grid.vector2)
-                    )
-
-contour(x = grid.vector1, 
-        y = grid.vector2,
-        z = prob.bayes, 
-        levels = 0.5, 
-        labels = "", 
-        lwd = 1,
-        add = TRUE
-        )
-
-# kmeans to separate data using subclasses --------------------------------
+```{r}
 
 class_1 <- my_data %>% 
   filter(class == 0)
@@ -335,23 +307,9 @@ class_2 <- my_data %>%
 kclass1 <- kmeans(class_1[, 1:2], centers = 5)
 kclass2 <- kmeans(class_2[, 1:2], centers = 5)
 
-# ggplot() +
-#   geom_point(data = as.tibble(kclass1$centers), mapping = aes(x = x1, y = x2, color = 'Class 1 Predicted')) +
-#   geom_point(data = as.tibble(kclass2$centers), mapping = aes(x = x1, y = x2, color = 'Class 2 Predicted')) +
-#   ylim(-5, 5) +
-#   xlim(-5, 5) +
-#   scale_color_manual(values = c('blue', 'red', 'green', 'orange')) +
-#   theme(legend.title=element_blank()) +
-#   ggtitle('kMeans Centers Predicted VS Truth') +
-#   geom_point(data = centroids[1:5, ], mapping = aes(x = x1, y = x2, color = 'Class 1')) +
-#   geom_point(data = centroids[6:10, ], mapping = aes(x = x1, y = x2, color = 'Class 2'))
-
 k_centroids1 <- tibble(x1 = kclass1$centers[, 1], x2 = kclass1$centers[, 2], class = rep(0, 5))
 k_centroids2 <- tibble(x1 = kclass2$centers[, 1], x2 = kclass2$centers[, 2], class = rep(1, 5))
 k_centroids <- rbind(k_centroids1, k_centroids2)
-  
-
-# kmeans to get subclass means, then do bayes optimal classifier ----------
 
 c1_num <- matrix(data = 0, ncol = 5, nrow = nrow(my_data))
 c1_den <- matrix(data = 0, ncol = 10, nrow = nrow(my_data))
@@ -400,7 +358,6 @@ for (i in 1:nrow(grid)){
     kprob.1[i, j] = dmnorm(grid[i, ], k_centroids[j, 1:2], diag(1/5, nrow = 2))  
   }
 }
-kprob.1
 kprob1.max = apply(kprob.1, 1, max)
 
 #second class - as per above
@@ -410,37 +367,24 @@ for (i in 1:nrow(grid)){
     kprob.2[i, j - 5] = dmnorm(grid[i, ], k_centroids[j, 1:2], diag(1/5, nrow = 2))  
   }
 }
-kprob.2
 kprob2.max = apply(kprob.2, 1, max)
 
 
 kprob.total = cbind(kprob1.max, kprob2.max)
 class = rep(1, times = length(kprob1.max))
 class[kprob1.max < kprob2.max] = 2
-cbind(kprob.total, class)
-
-# plot(grid[, 1], 
-#      grid[, 2],
-#      pch = ".", 
-#      cex = 2,
-#      col = ifelse(class == 1, "coral", "cornflowerblue"),
-#      xlab = "x1",
-#      ylab = "x2",
-#      main = "Optimal Bayes Classifier Decision Boundary
-#      # xlim = c(-5, 5),
-#      # ylim = c(-5, 5)
-#     )
+invisible(cbind(kprob.total, class))
 
 plot(grid[, 1], 
      grid[, 2],
      pch = ".", 
      cex = 2,
-     col = ifelse(class == 1, "coral", "cornflowerblue"),
+     col = ifelse(class == 1, "white", "white"),
      xlab = "x1",
      ylab = "x2",
      xlim = c(-5, 5),
      ylim = c(-5, 5),
-     main = "kMeans Optimal Bayes Classifier Decision Boundary"
+     main = "k-Means Optimal Bayes Classifier Decision Boundary"
     )
 
 
@@ -450,8 +394,8 @@ values1 <- my_data %>%
 values2 <- my_data %>% 
   filter(class == 1)
 
-points(values1, col = "coral")
-points(values2, col = "cornflowerblue") 
+points(values1, pch = 16)
+points(values2, pch = 17) 
 
 kprob.bayes <- matrix(kprob1.max / (kprob1.max + kprob2.max),
                      length(grid.vector1),
@@ -467,3 +411,39 @@ contour(x = grid.vector1,
         add = TRUE
         )
 
+
+```
+
+```{r}
+
+a <- my_data %>% 
+  filter(class == 0, kbayes_pred_class == 0) %>% 
+  nrow()
+
+b <- my_data %>% 
+  filter(class == 0, kbayes_pred_class == 1) %>% 
+  nrow()
+
+c <- my_data %>% 
+  filter(class == 1, kbayes_pred_class == 0) %>% 
+  nrow()
+
+d <- my_data %>% 
+  filter(class == 1, kbayes_pred_class == 1) %>% 
+  nrow()
+
+k_f_pos_bayes <- b / (a + b)
+k_f_neg_bayes <- c / (c + d)
+
+knitr::kable(as.data.frame(matrix(data = c(a, b, c, d),nrow = 2), row.names = c('True 0', 'True 1')), col.names = c('Predicted 0', 'Predicted 1'), caption = 'Confusion matrix for optimal Bayes separating boundary using k-means to approximate the subclass means.')
+
+paste0('The false positive rate is ', k_f_pos_bayes)
+paste0('The false negative rate is ', k_f_neg_bayes)
+
+```
+
+We see that the error rates for this method are exactly the same as Problem 4. So that as long as we know how many subclasses there are for each cluster, we do not need to actually know the subclass means when performing optimal Bayes classification.
+
+# Problem 5
+
+If we do not know the subclass labels, we should not use the approach outlined in PRoblem 4. Instead, we can initially estimate the two superclass means using *k*-means and then assign class labels using *EM* algorithm.
