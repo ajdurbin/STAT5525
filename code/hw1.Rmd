@@ -139,7 +139,26 @@ paste0('The false negative rate is ', f_neg_reg)
 
 # Problem 2
 
-We derive the optimal Bayes separating boundary by optimizing the posterior distribution, $Pr(G_k | X)$. Because we know how the data were generated, $Pr(x | G_k)$, we use Bayes Rule for optimization. We show $Pr(G_k = 1 | X)$ and then use Total Law of Probability to see $Pr(G_k = 2 | X) = 1 - Pr(G_k = 1 | X)$.
+We derive the optimal Bayes separating boundary by optimizing the posterior distribution, $Pr(G_k | X)$. 
+
+\begin{align*}
+
+argmin_G E[L(G, \hat{G}(X))] &= \iint L(G, \hat{G}(X)) Pr(X|G)Pr(G) dx dG \\
+
+&= \iint L(G, \hat{G}(X)) \frac{Pr(X|G)Pr(G)}{Pr(X)} Pr(X) dx dg \\
+&= \iint L(G, \hat{G}(X)) Pr(G|X) Pr(X) dx dG \\
+&= \sum_{k=1}^K L(G, \hat{G}(X)) Pr(G_k|X) \\
+&= L(G=1,G(X))Pr(G=1|X)+...+L(G=k,G(X))Pr(G=k|X)
+
+\end{align*}
+
+Assuming class $k*$ is the true class, the above quantity is equivalent to
+
+\[argmin_G[1-Pr(G=k*|X)].\]
+
+Because we are minimizing a negative probability, our estimator is \[argmax_G[Pr(G|X)].\]
+
+Since we know how the data were generated, $Pr(x | G_k)$, we use Bayes Rule for optimization. We show $Pr(G_k = 1 | X)$ and then use Total Law of Probability to see $Pr(G_k = 2 | X) = 1 - Pr(G_k = 1 | X)$.
 
 \begin{align*} Pr(G_k = 1| X) &= \frac{Pr(X = 1 | G_k) Pr(G_k)}{Pr(X)} \\
 
