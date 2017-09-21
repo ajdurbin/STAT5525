@@ -1,0 +1,1 @@
+for the bayes optimal classifier, actually show it's optimizing the posterior distribution!
