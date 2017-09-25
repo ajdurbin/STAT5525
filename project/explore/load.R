@@ -45,3 +45,11 @@ head(http)
 may_11 <- read_csv('~/data_analytics/DataSets1_9182017/Employees_info/2011-May.csv')
 colnames(may_11)
 # gives user_id and role at company, can see what employees still work there
+
+dec_09 <- read_csv('~/data_analytics/DataSets1_9182017/Employees_info/2009-12.csv')
+colnames(dec_09)
+# colnames appear consistent at least, name, id, email, role, domain
+# so we should be able to see attrition, now we want to predict it
+# we can do so using web traffic, working from home, and usb activity?
+
+format(object.size(logon), units = "auto")
