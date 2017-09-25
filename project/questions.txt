@@ -1,0 +1,7 @@
+QUESTIONS
+
+logon_info
+- Can users be logged on multiple machines at same time?
+- Can multiple users logon to shared computers at same time
+- All id are unique, how is this information helpful?
+- What is metric to know when user has locked screen?

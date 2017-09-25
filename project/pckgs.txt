@@ -1,0 +1,3 @@
+rle - Computes length and runs of vectors, useful for testing the logon logoff parts
+fread - read data faster or read only a subset of data
+difftime - time stamp differences for postix objects
