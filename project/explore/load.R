@@ -6,6 +6,13 @@ library(tidyverse)
 
 
 logon <- read_csv('~/data_analytics/DataSets1_9182017/logon_info.csv')
+# maybe consider employees who go long periods logged off have meetings
+# and look at their position to see if its one that would require being away
+# from computer frequently
+# look at logon logoff information near lunchtime, see if i can classify
+# this and find people who eat together based on similar logon logoff times,
+# say like 1 minute apart
+
 
 
 # device information ------------------------------------------------------
@@ -22,7 +29,14 @@ head(device)
 
 http <- read_csv('~/data_analytics/DataSets1_9182017/http_info.csv', col_names = FALSE)
 head(http)
-# contains log id, date, user, pc, and website
+# contains log id, date, user, pc, and website url
+# web traffic is just the domains, so no need to strip out
+# good idea to make a vector of known bad sites and then add new column
+# bad sites could be grouped by topic later, but for now
+# just have social networking, news, entertainment
+# will quickly find a list of most common ones
+# PREDICT GENDER BASED ON TRAFFIC BUT DONT HAVE GENDER INFORMATION YET
+# WOULD NEED TO SOMEHOW GET GENDER INTO DATASET TOO
 
 
 # employee information ----------------------------------------------------
