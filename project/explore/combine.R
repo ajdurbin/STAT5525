@@ -26,7 +26,7 @@ bad_sites <- c("facebook", "myspace", "twitter", "instagram", "pinterest",
                "tumblr", "netflix", "hulu", "youtube", "monster", "indeed",
                "linkedin", "glassdoor", "careerbuilder")
 
-usr <- unique(logon$user)[sample(1:length(logon), 1)]
+# usr <- unique(logon$user)[sample(1:length(logon), 1)]
 
 combo_filter <- function(user, log = logon, dev = device, web = http,
                          cur = current, total = emp, sites = bad_sites){
