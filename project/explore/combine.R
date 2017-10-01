@@ -1,8 +1,8 @@
-# combine userid, datetime, http traffic, device, attrition, logon/logoff
-# then filter web traffic
+options(stringsAsFactors = FALSE)
 
 rm(list = ls())
 library(tidyverse)
+library(parallel)
 
 # load data sets for parsing
 logon <- read_csv('~/data_analytics/DataSets1_9182017/logon_info.csv')
@@ -13,22 +13,33 @@ colnames(device)[5] <- "usb"
 http <- read_csv('~/data_analytics/DataSets1_9182017/http_info.csv', col_names = FALSE)
 colnames(http) <- c("id", "date", "user", "pc", "website")
 
+# current employee from most recent employee data set
 current <- read_csv("~/data_analytics/DataSets1_9182017/Employees_info/2011-May.csv")
 current <- current %>%
   mutate(user = stringr::str_c(stringr::str_sub(Domain, 1, 4), user_id, sep = "/"))
 
+# all employee data sites combined into single dataframe
 emp <- list.files(path = "~/data_analytics/DataSets1_9182017/Employees_info/",
                   pattern = "*.csv", full.names = TRUE)
 emp <- do.call(rbind, lapply(emp, read_csv)) %>% 
   mutate(user = stringr::str_c(stringr::str_sub(Domain, 1, 4), user_id, sep = "/"))
 
+# balance between social media, streaming, shopping, job searching
 bad_sites <- c("facebook", "myspace", "twitter", "instagram", "pinterest",
                "tumblr", "netflix", "hulu", "youtube", "monster", "indeed",
-               "linkedin", "glassdoor", "careerbuilder")
+               "linkedin", "glassdoor", "careerbuilder", "amazon",
+               "craigslist", "flickr")
 
+# if cannot run on entire data set
 # usr <- unique(logon$user)[sample(1:length(logon), 1)]
 
-combo_filter <- function(user, log = logon, dev = device, web = http,
+# function to return list object of 
+# user
+# data frame of (date, pc, logon/logoff, usb, web)
+# attrition or not
+# number of bad site visits
+# roles in company
+combo_filter <- function(usr, log = logon, dev = device, web = http,
                          cur = current, total = emp, sites = bad_sites){
   
   usr_log <- log %>% 
@@ -45,7 +56,7 @@ combo_filter <- function(user, log = logon, dev = device, web = http,
   combo <- plyr::rbind.fill(usr_log, usr_dev, usr_web) %>% 
     mutate(activity = ifelse(is.na(activity), "using", activity)) %>% 
     mutate(website = ifelse(is.na(website), "none", website)) %>% 
-    mutate(usb = ifelse(is.na(usb), "none", usb))
+    mutate(usb = ifelse(is.na(usb), "none", usb)) 
   
   # 1 means attrition
   attrition <- ifelse(usr %in% cur$user, 0, 1)
@@ -71,4 +82,25 @@ combo_filter <- function(user, log = logon, dev = device, web = http,
   
 }
 
-test <- combo_filter(user = usr)
+# run for single user
+# system.time(
+#   test <- combo_filter(user = usr)
+# )
+
+# create parallel cluster for later
+no_cores <- detectCores() - 1
+cl <- makeCluster(no_cores, type = "FORK")
+clusterExport(cl = cl, ls())
+
+# run for all users in parallel
+system.time(
+  big_data <- parSapply(cl = cl, unique(logon$user), function(g) combo_filter(usr = g))
+)
+# surprisingly works, returns a 5 x 1000 matrix
+# first row is users
+# second row is user_data
+# third row is attrition flag
+# fourth row is bad site count
+# fifth row is roles in company
+
+stopCluster(cl)
