@@ -28,7 +28,7 @@ emp <- do.call(rbind, lapply(emp, read_csv)) %>%
 bad_sites <- c("facebook", "myspace", "twitter", "instagram", "pinterest",
                "tumblr", "netflix", "hulu", "youtube", "monster", "indeed",
                "linkedin", "glassdoor", "careerbuilder", "amazon",
-               "craigslist", "flickr")
+               "craigslist", "flickr", "reddit", "ebay", "espn")
 
 # if cannot run on entire data set
 # usr <- unique(logon$user)[sample(1:length(logon), 1)]
@@ -56,7 +56,8 @@ combo_filter <- function(usr, log = logon, dev = device, web = http,
   combo <- plyr::rbind.fill(usr_log, usr_dev, usr_web) %>% 
     mutate(activity = ifelse(is.na(activity), "using", activity)) %>% 
     mutate(website = ifelse(is.na(website), "none", website)) %>% 
-    mutate(usb = ifelse(is.na(usb), "none", usb)) 
+    mutate(usb = ifelse(is.na(usb), "none", usb)) %>% 
+    as.data.frame()
   
   # 1 means attrition
   attrition <- ifelse(usr %in% cur$user, 0, 1)
@@ -68,11 +69,17 @@ combo_filter <- function(usr, log = logon, dev = device, web = http,
     cnt <- cnt + tmp
   }
   
+  # standardize based on total web traffic
+  cnt <- cnt / nrow(combo[combo$wesite != "none"])
+  
   # find user roles
   roles <- total %>%
     filter(user == usr) %>% 
     select(Role) %>% 
     unique()
+  
+  # get vector of different roles
+  roles <- as.character(roles$Role)
   
   # pckg for return
   pckg <- list("user" = usr, "user_data" = combo, "attrition" = attrition,
@@ -96,11 +103,16 @@ clusterExport(cl = cl, ls())
 system.time(
   big_data <- parSapply(cl = cl, unique(logon$user), function(g) combo_filter(usr = g))
 )
-# surprisingly works, returns a 5 x 1000 matrix
-# first row is users
-# second row is user_data
-# third row is attrition flag
-# fourth row is bad site count
-# fifth row is roles in company
+
+# first col is users
+# second col is user_data
+# third col is attrition flag
+# fourth col is bad site count
+# fifth col is roles in company
+# to better visualize the structure
+# user data will say List, 5
+# meaning that there are 5 columns in this List
+# similar for roles
+big_data <- t(big_data)
 
 stopCluster(cl)
