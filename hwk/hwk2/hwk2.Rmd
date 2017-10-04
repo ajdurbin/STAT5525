@@ -7,7 +7,7 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, cache = FALSE)
 ```
 
 ```{r, include=FALSE}
@@ -15,6 +15,8 @@ knitr::opts_chunk$set(echo = TRUE)
 library(caret)
 # for logistic lasso
 library(glmnet)
+# for classification tree
+library(rpart)
 ```
 
 ```{r}
@@ -28,6 +30,22 @@ raw[, 1 : 57] <- scale(raw[, 1 : 57])
 raw[, 58] <- as.factor(raw[, 58])
 
 ```
+
+# Part 3
+## Part b
+
+The following code constructs a classification tree.
+
+```{r}
+
+trc <- trainControl(method = "cv", number = 10)
+carfit <- train(V58 ~ ., data = raw, trControl = trc, method = "rpart", 
+                control = list(maxdepth = 1000, minsplit = 2))
+carfit
+carfit$finalModel
+carfit$resample
+```
+
 # Part 4
 
 The following code performs logistic regression with 10 cross fold validation and provides overall accuracy rates for each fold.
