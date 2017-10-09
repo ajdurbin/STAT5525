@@ -23,6 +23,22 @@ library(rpart)
 ## Part a
 ## Part b
 
+Let $A$ be the invertible matrix that standardizes the data in $X$. Also let $Z=A\theta$ and $\beta = A\theta$. We want to show that our objective functions are not equivalent.
+
+The LASSO solution is
+\[ \hat{\beta} = \min_\beta ||Y-X\beta||_2 + \lambda^T|\beta|.\]
+
+Our standardized solution is
+\begin{align*}
+\hat{\theta} &= \min_\theta ||Y-Z\theta||_2 + \lambda^T|\theta| \\
+&= \min_\theta ||Y-XAA^{-1}\beta||_2 + \lambda^T|A^{-1}\beta| \\
+&= \min_\theta ||Y-X\beta||_2 + \lambda^T|A^{-1}\beta| \\
+&\ne \min_\beta ||Y-X\beta||_2 + \lambda^T|\beta|.
+\end{align*}
+
+Since the objective functions are different, the LASSO solutions should also be different. Hence LASSO is not invariant to standardization of data.
+
+
 # Part 2
 It suffices to solve this problem in two steps. We first show that the Lagrangian and constrained LASSO definitions are equivalent. We then show the correspondence between the $\beta_k$'s and $\beta_k^c$'s.
 
