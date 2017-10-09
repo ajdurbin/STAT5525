@@ -4,6 +4,10 @@ rm(list = ls())
 library(tidyverse)
 library(parallel)
 
+
+# load and parse data -----------------------------------------------------
+
+
 # load data sets for parsing
 logon <- read_csv('~/data_analytics/DataSets1_9182017/logon_info.csv')
 
@@ -23,22 +27,23 @@ emp <- list.files(path = "~/data_analytics/DataSets1_9182017/Employees_info/",
                   pattern = "*.csv", full.names = TRUE)
 emp <- do.call(rbind, lapply(emp, read_csv)) %>% 
   mutate(user = stringr::str_c(stringr::str_sub(Domain, 1, 4), user_id, sep = "/"))
+emp$Role <- stringr::str_replace_all(emp$Role, " ", "")
 
 # balance between social media, streaming, shopping, job searching
 bad_sites <- c("facebook", "myspace", "twitter", "instagram", "pinterest",
                "tumblr", "netflix", "hulu", "youtube", "monster", "indeed",
                "linkedin", "glassdoor", "careerbuilder", "amazon",
-               "craigslist", "flickr", "reddit", "ebay", "espn")
+               "craigslist", "flickr", "reddit", "ebay", "espn",
+               "eharmony", "match", "tinder")
+
+
+# function declarations ---------------------------------------------------
+
 
 # if cannot run on entire data set
-# usr <- unique(logon$user)[sample(1:length(logon), 1)]
+usr <- unique(logon$user)[sample(1:length(logon), 1)]
 
-# function to return list object of 
-# user
-# data frame of (date, pc, logon/logoff, usb, web)
-# attrition or not
-# number of bad site visits
-# roles in company
+# return user summary
 combo_filter <- function(usr, log = logon, dev = device, web = http,
                          cur = current, total = emp, sites = bad_sites){
   
@@ -59,6 +64,11 @@ combo_filter <- function(usr, log = logon, dev = device, web = http,
     mutate(usb = ifelse(is.na(usb), "none", usb)) %>% 
     as.data.frame()
   
+  name_info <- total %>% 
+    filter(user == usr) %>% 
+    select(employee_name, Email) %>% 
+    unique()
+  
   # 1 means attrition
   attrition <- ifelse(usr %in% cur$user, 0, 1)
   
@@ -78,21 +88,90 @@ combo_filter <- function(usr, log = logon, dev = device, web = http,
     select(Role) %>% 
     unique()
   
-  # get vector of different roles
-  roles <- as.character(roles$Role)
+  # collapse into char string separated by spaces
+  roles <- paste0(as.character(roles$Role), collapse = " ")
+  
+  # get miscellaneous pc information from total
+  unq_pc <- pc_prs(combo = combo)
   
   # pckg for return
-  pckg <- list("user" = usr, "user_data" = combo, "attrition" = attrition,
-               "bad site visits" = cnt, "roles" = roles)
+  # pckg <- list("user" = usr, "user_data" = combo, "attrition" = attrition,
+  #              "bad site visits" = cnt, "roles" = roles)
+  pckg <- data.frame(name = name_info$employee_name, email = name_info$Email,
+                     user = usr, attrition = attrition, bad_sites = cnt, 
+                     roles = roles, primary_pc = unq_pc$prm_pc, 
+                     pc_count = unq_pc$unq_pc, num_on = unq_pc$on, 
+                     num_off = unq_pc$off, prm_num_on = unq_pc$prm_on, 
+                     prm_num_off = unq_pc$prm_off, usb_num = unq_pc$usb_con)
+               
   
   return(pckg)
   
 }
 
+# return user pc information - used in combo_filter
+pc_prs <- function(combo){
+  
+  # total machines theyve logged on to
+  unq_pc <- combo %>%
+    select(pc) %>% 
+    unique() %>% 
+    nrow()
+  
+  # total logons
+  on <- combo %>%
+    select(activity) %>% 
+    filter(activity == "Logon") %>% 
+    nrow()
+  
+  # total logoffs
+  off <- combo %>%
+    select(activity) %>% 
+    filter(activity == "Logoff") %>% 
+    nrow()
+  
+  # get number of usb connects
+  usb_con <- combo %>%
+    select(usb) %>% 
+    filter(usb == "Connect") %>% 
+    nrow()
+  
+  # get primary machine
+  prm_pc <- combo %>% 
+    group_by(pc) %>% 
+    mutate(N = n()) %>% 
+    ungroup() %>% 
+    filter(N == max(N)) %>% 
+    select(pc) %>% 
+    unique() %>% 
+    as.character()
+  
+  # primary pc logons
+  prm_pc_on <- combo %>%
+    filter(pc == prm_pc) %>% 
+    filter(activity == "Logon") %>% 
+    nrow()
+  
+  # primary pc logoffs
+  prm_pc_off <- combo %>%
+    filter(pc == prm_pc) %>% 
+    filter(activity == "Logoff") %>% 
+    nrow()
+  
+  pckg <- data.frame(unq_pc = unq_pc, on = on, off = off, usb_con = usb_con,
+                     prm_pc = prm_pc, prm_on = prm_pc_on, prm_off = prm_pc_off)
+  
+  return(pckg)
+  
+}
+
+# run ---------------------------------------------------------------------
+
+
 # run for single user
-# system.time(
-#   test <- combo_filter(user = usr)
-# )
+system.time(
+  test <- combo_filter(usr = usr)
+)
 
 # create parallel cluster for later
 no_cores <- detectCores() - 1
@@ -101,18 +180,15 @@ clusterExport(cl = cl, ls())
 
 # run for all users in parallel
 system.time(
-  big_data <- parSapply(cl = cl, unique(logon$user), function(g) combo_filter(usr = g))
+  big_data <- parSapply(cl = cl, unique(logon$user), 
+                                  function(g) combo_filter(usr = g))
 )
 
-# first col is users
-# second col is user_data
-# third col is attrition flag
-# fourth col is bad site count
-# fifth col is roles in company
-# to better visualize the structure
-# user data will say List, 5
-# meaning that there are 5 columns in this List
-# similar for roles
+# formatting
 big_data <- t(big_data)
+big_data <- as.data.frame(big_data, row.names = FALSE)
+for(i in 1:ncol(big_data)){
+  big_data[, i] <- as.vector(unlist(big_data[, i]))
+}
 
 stopCluster(cl)
