@@ -21,6 +21,13 @@ library(rpart)
 
 # Part 1
 ## Part a
+
+The CART algorithm recursively partions the space such that the bins contain mostly homogenous observations. When partitioning the space with respect to a feature, say $x_{j^*}$, we look for breaks in the data $x_{j^*} < \gamma$ such that the variance is minimimal. So to show CART is invariant to standardizing features, we need to show that the order or the data is preserved after transformation. Indeed,
+
+\[ x_{s,j^*} \le x_{t, j^*} \implies \frac{x_{s,j^*} - \bar{x}_{.,j^*}}{\hat{\sigma}^2_{., j^*}} \le \frac{x_{t, j^*}- \bar{x}_{.,j^*}}{\hat{\sigma}^2_{., j^*}}. \]
+
+So that the ordering is prevered after transformation. Therefore CART is invariant to standardization.
+
 ## Part b
 
 Let $A$ be the invertible matrix that standardizes the data in $X$. Also let $Z=A\theta$ and $\beta = A\theta$. We want to show that our objective functions are not equivalent.
@@ -155,6 +162,8 @@ paste0("The overall classification error is: ", mean(preders))
 ```
 
 So we see there is an improvement after pruning the tree.
+
+## Part d
 
 # Part 4
 
