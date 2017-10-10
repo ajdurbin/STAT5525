@@ -19,6 +19,54 @@ library(glmnet)
 library(rpart)
 ```
 
+# Part 1
+## Part a
+## Part b
+
+Let $A$ be the invertible matrix that standardizes the data in $X$. Also let $Z=A\theta$ and $\beta = A\theta$. We want to show that our objective functions are not equivalent.
+
+The LASSO solution is
+\[ \hat{\beta} = \min_\beta ||Y-X\beta||_2 + \lambda^T|\beta|.\]
+
+Our standardized solution is
+\begin{align*}
+\hat{\theta} &= \min_\theta ||Y-Z\theta||_2 + \lambda^T|\theta| \\
+&= \min_\theta ||Y-XAA^{-1}\beta||_2 + \lambda^T|A^{-1}\beta| \\
+&= \min_\theta ||Y-X\beta||_2 + \lambda^T|A^{-1}\beta| \\
+&\ne \min_\beta ||Y-X\beta||_2 + \lambda^T|\beta|.
+\end{align*}
+
+Since the objective functions are different, the LASSO solutions should also be different. Hence LASSO is not invariant to standardization of data.
+
+
+# Part 2
+It suffices to solve this problem in two steps. We first show that the Lagrangian and constrained LASSO definitions are equivalent. We then show the correspondence between the $\beta_k$'s and $\beta_k^c$'s.
+
+We rewrite \[\min_\beta ||Y-X\beta||_2\ subject\ to\ \sum|\beta_k| < s,\]
+with a Lagrange multiplier as \[\min_\beta ||Y-X\beta||_2 + \lambda(\sum|\beta_k| - s). \]
+
+The above is then equivalent to
+\[\min_\beta ||Y-X\beta||_2 + \lambda\sum|\beta_k| - \lambda s. \]
+
+Since $\lambda s$ does not depend on $\beta$, the previous line is equivalent to
+\[\min_\beta ||Y-X\beta||_2 + \lambda\sum|\beta_k| \] when we minimize with respect to $\beta$, the lagrangian form of the LASSO.
+
+Now to show correspondence between $\beta_k$'s and $\beta_k^c$'s.
+
+
+\begin{align*}
+\min_\beta ||Y-X\beta||_2 + \lambda \sum_{j=1}^p |\beta_j| &= \min_\beta \sum_{i=1}^n (y_i - \beta_0 - \sum_{j=1}^p x_{ij}\beta_j)^2 + \lambda \sum_{j=1}^p |\beta_j|  \\
+&= \min_\beta \sum_{i=1}^n (y_i - \beta_0 - \sum_{j=1}^p \bar{x}_{j}\beta_j + \sum_{j=1}^p \bar{x}_{j}\beta_j \sum_{j=1}^p x_{ij}\beta_j)^2 + \lambda \sum_{j=1}^p |\beta_j| \\
+&= \min_\beta \sum_{i=1}^n (y_i - \beta_0 - \sum_{j=1}^p \bar{x}_{j}\beta_j -  \sum_{j=1}^p (x_{ij} - \bar{x}_j)\beta_j)^2 + \lambda \sum_{j=1}^p |\beta_j| \\
+&= \min_\beta \sum_{i=1}^n (y_i - \beta^c_0 - \sum_{j=1}^p x^c_{ij}\beta_j)^2 + \lambda \sum_{j=1}^p |\beta_j| \\
+&= \min_\beta ||Y-X\beta^c||_2 + \lambda \sum_{j=1}^p |\beta_j^c|.
+\end{align*}
+
+So that for $j = 1, 2, ..., p$, $\beta_j = \beta_j^c$. But for the intercept term, $\beta_0^c = \beta_0 - \sum_{j=1}^p \bar{x}_j\beta_j$.
+
+# Part 3
+## Part a
+
 ```{r}
 
 set.seed(130)
@@ -31,19 +79,18 @@ raw[, 58] <- as.factor(raw[, 58])
 
 ```
 
-# Part 3
 ## Part b
 
 The following code constructs a classification tree.
 
 ```{r}
 
-trc <- trainControl(method = "cv", number = 10)
-carfit <- train(V58 ~ ., data = raw, trControl = trc, method = "rpart", 
-                control = list(maxdepth = 1000, minsplit = 2))
-carfit
-carfit$finalModel
-carfit$resample
+# trc <- trainControl(method = "cv", number = 10)
+# carfit <- train(V58 ~ ., data = raw, trControl = trc, method = "rpart", 
+#                 control = list(maxdepth = 1000, minsplit = 2))
+# carfit
+# carfit$finalModel
+# carfit$resample
 ```
 
 # Part 4
