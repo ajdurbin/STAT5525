@@ -76,7 +76,7 @@ So that for $j = 1, 2, ..., p$, $\beta_j = \beta_j^c$. But for the intercept ter
 
 ```{r}
 
-set.seed(130)
+set.seed(1030)
 # load spam data set
 raw <- read.table("spam.data.txt")
 # standardize columns
@@ -86,7 +86,7 @@ raw[, 58] <- as.factor(raw[, 58])
 
 ```
 
-## Part b
+## Part a
 
 The following code constructs a classification tree.
 
@@ -95,7 +95,7 @@ The following code constructs a classification tree.
 # error storage
 preders <- rep(0, 10)
 # split into training and testing
-train_index <- createDataPartition(y = raw[, 58], times = 10, p = 0.8, list = FALSE)
+train_index <- createDataPartition(y = raw[, 58], times = 10, p = 0.9, list = FALSE)
 
 for(i in 1 : 10){
   
@@ -121,16 +121,55 @@ paste0("The overall classification error is: ", mean(preders))
 
 ```
 
-## Part c
+## Part b
 
-The following code constructs a classification tree similar to above, though we use prune the tree with the minimal complexity parameter.
+The following code constructs a classification tree similar to above, though we prune the tree with the complexity parameter $cp = 0.001$ during the cross-validation.
 
 ```{r}
 
 # error storage
 preders <- rep(0, 10)
 # split into training and testing
-train_index <- createDataPartition(y = raw[, 58], times = 10, p = 0.8, list = FALSE)
+train_index <- createDataPartition(y = raw[, 58], times = 10, p = 0.9, list = FALSE)
+
+for(i in 1 : 10){
+  
+  # train/test sets
+  raw_train <- raw[train_index[, i], ]
+  raw_test <- raw[-train_index[, i], ]
+  
+  # initial fit
+  carfit <- rpart(V58 ~ ., data = raw_train, method = "class",
+                  control = list(cp = .Machine$double.eps, minsplit = 2, 
+                                 minbucket = 1))
+  # prune tree 
+  carfit_prune <- prune(carfit, cp = 0.001)
+  
+  # make predictions
+  carpred <- predict(carfit_prune, newdata = raw_test[, 1:57], type="class")
+  
+  # confusion matrix and error rate
+  conf <- table(raw_test[, 58], carpred)
+  preders[i] <- (conf[2]  + conf[3]) / (conf[1] + conf[4])
+  
+}
+
+paste0("The overall classification error is: ", mean(preders))
+
+```
+
+So we see there is an improvement after pruning the tree with $cp = 0.001$.
+
+## Part c
+
+The following code constructs a classification tree similar to above, though we prune the tree with the complexity parameter from the cross-validation steps that minimizes the cross-cross validation error.
+
+```{r}
+
+# error storage
+preders <- rep(0, 10)
+# split into training and testing
+train_index <- createDataPartition(y = raw[, 58], times = 10, p = 0.9, list = FALSE)
 
 for(i in 1 : 10){
   
@@ -159,11 +198,39 @@ for(i in 1 : 10){
 
 paste0("The overall classification error is: ", mean(preders))
 
+
 ```
 
-So we see there is an improvement after pruning the tree.
+So we see there is more of an improvement using the complexity parameter that minimizes the classification error over just specifying the complexity parameter when pruning.
 
-## Part d
+Additionally, we can use a Random Forest procedure to further improve our erro rates.
+
+
+```{r}
+
+trc <- trainControl(method = "cv", number = 10)
+forfit <- train(V58 ~ ., data = raw, trControl = trc, method = "rf")
+forfit$resample
+
+```
+
+Our individual rates are the following.
+
+```{r}
+
+1 - forfit$resample[, 1]
+
+```
+
+And the overall error rate is the following.
+
+```{r}
+
+mean(1 - forfit$resample[, 1])
+
+```
+
+So we see that it is a larger improvement over just using CART.
 
 # Part 4
 
