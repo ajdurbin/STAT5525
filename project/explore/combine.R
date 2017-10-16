@@ -11,14 +11,17 @@ library(parallel)
 # load data sets for parsing
 logon <- read_csv('~/data_analytics/DataSets1_9182017/logon_info.csv')
 logon$date <- lubridate::mdy_hms(logon$date)
+logon$time <- hms::as.hms(logon$date)
 
 device <- read_csv('~/data_analytics/DataSets1_9182017/device_info.csv')
 colnames(device)[5] <- "usb"
 device$date <- lubridate::mdy_hms(device$date)
+device$time <- hms::as.hms(device$date)
 
 http <- read_csv('~/data_analytics/DataSets1_9182017/http_info.csv', col_names = FALSE)
 colnames(http) <- c("id", "date", "user", "pc", "website")
 http$date <- lubridate::mdy_hms(http$date)
+http$time <- hms::as.hms(http$date)
 
 # current employee from most recent employee data set
 current <- read_csv("~/data_analytics/DataSets1_9182017/Employees_info/2011-May.csv")
