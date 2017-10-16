@@ -1,23 +1,24 @@
-library(stringr)
-library(dplyr)
-setwd("C:/Users/dougl/Documents/FALL 17/DATA ANALYTICS/DATAPROJ")
-logon <- read.csv("logon_info.csv")
-logon <- logon[,2:5]
+library(tidyverse)
+
+setwd("/home/alex/data_analytics/project/explore/")
+logon <- read_csv("/home/alex/data_analytics/DataSets1_9182017/logon_info.csv")
 
 # Take out time from date-time
 Hours <- format(as.POSIXct(strptime(logon$date,"%m/%d/%Y %H:%M:%S",tz="")) ,format = "%H:%M:%S")
+# add to df
 logon$hour <- Hours
 
 # Take out date from date-time
 Day <- format(as.POSIXct(strptime(logon$date,"%m/%d/%Y %H:%M:%S",tz="")) ,format = "%Y-%m-%d")
+# add to df
 logon$date <- Day
 
-# Change useris to consistent format
+# change user to consistent format
 # with employee log
-logon$user_id <- str_sub(logon$user,-7,-1)
+logon$user_id <- stringr::str_sub(logon$user,-7,-1)
 
-# Use only logoffs from the weekdays
-logon_week <- logon[!logon$day %in% c("Saturday","Sunday"),]
+# use only logoffs from the weekdays
+logon_week <- logon[!logon$date %in% c("Saturday","Sunday"),]
 logon_week <- logon[logon$activity == "Logoff",]
 
 # If logout was after 5:30

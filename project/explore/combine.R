@@ -8,20 +8,22 @@ library(parallel)
 # load and parse data -----------------------------------------------------
 
 
-# load data sets for parsing
 logon <- read_csv('~/data_analytics/DataSets1_9182017/logon_info.csv')
 logon$date <- lubridate::mdy_hms(logon$date)
 logon$time <- hms::as.hms(logon$date)
+logon$day <- lubridate::as_date(logon$date)
 
 device <- read_csv('~/data_analytics/DataSets1_9182017/device_info.csv')
 colnames(device)[5] <- "usb"
 device$date <- lubridate::mdy_hms(device$date)
 device$time <- hms::as.hms(device$date)
+device$day <- lubridate::as_date(device$date)
 
 http <- read_csv('~/data_analytics/DataSets1_9182017/http_info.csv', col_names = FALSE)
 colnames(http) <- c("id", "date", "user", "pc", "website")
 http$date <- lubridate::mdy_hms(http$date)
 http$time <- hms::as.hms(http$date)
+http$day <- lubridate::as_date(http$date)
 
 # current employee from most recent employee data set
 current <- read_csv("~/data_analytics/DataSets1_9182017/Employees_info/2011-May.csv")
@@ -55,14 +57,14 @@ combo_filter <- function(usr, log = logon, dev = device, web = http,
   
   usr_log <- log %>% 
     filter(user == usr) %>% 
-    select(date, pc, activity)
+    select(date, pc, activity, day, time)
   usr_dev <- dev %>%
     filter(user == usr) %>% 
-    select(date, pc, usb)
+    select(date, pc, usb, day, time)
   # note some people do not use usb
   usr_web <- web %>% 
     filter(user == usr) %>% 
-    select(date, pc, website)
+    select(date, pc, website, day, time)
   # now adjust the na in activitiy, website, usb
   combo <- plyr::rbind.fill(usr_log, usr_dev, usr_web) %>% 
     mutate(activity = ifelse(is.na(activity), "using", activity)) %>% 
