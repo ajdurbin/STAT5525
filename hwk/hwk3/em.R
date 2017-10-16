@@ -1,6 +1,7 @@
 library(MASS)
 library(mvtnorm)
 
+
 ## Probability of each cluster for each point
 E.step <- function(X, phi, N) {
   h <-
