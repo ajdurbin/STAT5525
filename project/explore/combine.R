@@ -72,6 +72,9 @@ combo_filter <- function(usr, log = logon, dev = device, web = http,
     mutate(usb = ifelse(is.na(usb), "none", usb)) %>% 
     as.data.frame()
   
+  # premature return for fixing consecutive connects/logons
+  return(combo)
+  
   name_info <- total %>% 
     filter(user == usr) %>% 
     select(employee_name, Email) %>% 

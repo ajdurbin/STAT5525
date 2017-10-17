@@ -36,10 +36,54 @@ emp$Role <- stringr::str_replace_all(emp$Role, " ", "")
 
 
 # device ------------------------------------------------------------------
+# device_info.csv (~66k records)
+# * Fields: id, date, user, pc, activity (connect/disconnect)
+# * Some users use a portable zip drive
+# * Some connect(s) may be missing disconnect(s), since machine may be turned 
+#   off without a proper disconnect. 
 
 head(device)
+length(unique(device$pc))
+# 228 unique machines in here
 
-# look at counts of pcs and entries
+# check that connects/disconnects are equal, should be able to track this
+# usb connections
+con <- device %>%
+  group_by(pc) %>% 
+  filter(usb == "Connect") %>% 
+  summarise(n = n()) %>% 
+  arrange(pc, -n)
+head(con, n = 10)
+tail(con, n = 10)
+summary(con$n)
+hist(con$n)
+# usb disconnections
+dis <- device %>%
+  group_by(pc) %>% 
+  filter(usb == "Connect") %>% 
+  summarise(n = n()) %>% 
+  arrange(pc, -n)
+head(dis, n = 10)
+tail(dis, n = 10)
+summary(dis$n)
+hist(dis$n)
+
+# compare connections and disconnections
+head(con, n = 10)
+head(dis, n = 10)
+
+all.equal(con, dis)
+# returns true, so that each machine has equal connects/disconnects
+# question remaing is if they are consecutive connects/disconnects
+# how to check this?
+# filter by pc, date, user and just look maybe?
+tmp <- device %>% 
+  group_by(date) %>% 
+  arrange(pc, user)
+head(tmp, n = 20)
+tail(tmp, n = 20)
+
+# look at counts of pcs
 tmp <- device %>%
   group_by(pc) %>% 
   summarise(n = n()) %>% 
