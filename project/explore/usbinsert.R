@@ -3,54 +3,60 @@
 usr <- "ACME/KLS0717"
 # usr <- unique(logon$user)[sample(1:length(unique(logon$user)), 1)]
 test <- combo_filter(usr = usr)
-head(test)
+# head(test)
 tmp <- test %>%
   filter(usb != "none")
-unique(tmp$pc)
+# unique(tmp$pc)
 # get subset for trying loop on
 tmp <- tmp[1:46, ]
 # find number of consecutive connects
 my_log <- tmp$usb == lag(tmp$usb)
-my_log <- na.omit(my_log)
+# first value is na, set it to false, first value doesnt matter since
+# we checking if the second value is equal to the first
+my_log[1] <- FALSE
+# my_log <- na.omit(my_log)
 sum(my_log)
 # so should have two extra rows to tmp
 nrow(tmp)
 
+# now to get all rows that are not consecutive connects
+no_con <- tmp[!my_log,]
+nrow(no_con)
+# how to get average difference without loop?
+
 new_usb <- tibble(date = as_datetime(now()), 
-                  pc = "", 
-                  activity = "",
-                  day = as.Date(date),
-                  time = hms::as.hms(date),
-                  usb = "",
-                  website = "")
+                      pc = "", 
+                      activity = "",
+                      day = as.Date(date),
+                      time = hms::as.hms(date),
+                      usb = "",
+                      website = "")
 
 # add column to flag if the matching disconnect was missing
 # tmp$mis_dis <- NA
 
-tmp <- as.tibble(tmp)
+# tmp <- as.tibble(tmp)
 
 for(i in 1:(nrow(tmp)-1)){
-  
   # get next row for checking
   cur <- tmp[i, ]
   nxt <- tmp[i+1, ]
-  
   # check if they same, then create row and add to df
   if(cur$usb == nxt$usb){
     new_row <- cur
     new_row$usb <- 'Disconnect'
     # cur$mis_dis <- TRUE
-    new_usb <- rbind(new_usb, rbind(cur, new_row))
-  } else{
-    
-   new_usb <- rbind(new_usb, cur)
-    
+    new_usb <- rbind(new_usb, new_row)
   }
-  
 }
 
+# remove dummy row
 new_usb <- new_usb[2:nrow(new_usb), ]
-nrow(new_usb)
+nrow(new_usb) # now should match the sum(my_log)
+# update tmp and arrange by date
+tmp <- rbind(tmp, new_usb)
+tmp <- tmp %>% 
+  arrange(date)
 
 
 
