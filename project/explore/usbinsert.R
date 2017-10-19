@@ -1,10 +1,79 @@
 # usb disconnect insert script
+# sample user "ACME/KLS0717"
+usr <- "ACME/KLS0717"
 # usr <- unique(logon$user)[sample(1:length(unique(logon$user)), 1)]
-# test <- combo_filter(usr = usr)
-# head(test)
-# tmp <- test %>%
-#   filter(usb != "none")
-# unique(tmp$pc)
+test <- combo_filter(usr = usr)
+head(test)
+tmp <- test %>%
+  filter(usb != "none")
+unique(tmp$pc)
+# get subset for trying loop on
+tmp <- tmp[1:46, ]
+# find number of consecutive connects
+my_log <- tmp$usb == lag(tmp$usb)
+my_log <- na.omit(my_log)
+sum(my_log)
+# so should have two extra rows to tmp
+nrow(tmp)
+
+new_usb <- tibble(date = as_datetime(now()), 
+                  pc = "", 
+                  activity = "",
+                  day = as.Date(date),
+                  time = hms::as.hms(date),
+                  usb = "",
+                  website = "")
+
+# add column to flag if the matching disconnect was missing
+# tmp$mis_dis <- NA
+
+tmp <- as.tibble(tmp)
+
+for(i in 1:(nrow(tmp)-1)){
+  
+  # get next row for checking
+  cur <- tmp[i, ]
+  nxt <- tmp[i+1, ]
+  
+  # check if they same, then create row and add to df
+  if(cur$usb == nxt$usb){
+    new_row <- cur
+    new_row$usb <- 'Disconnect'
+    # cur$mis_dis <- TRUE
+    new_usb <- rbind(new_usb, rbind(cur, new_row))
+  } else{
+    
+   new_usb <- rbind(new_usb, cur)
+    
+  }
+  
+}
+
+new_usb <- new_usb[2:nrow(new_usb), ]
+nrow(new_usb)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# check unique usb users and pcs ------------------------------------------
+
 
 # try to find users using usb with more than one machine
 length(unique(device$user))
@@ -34,6 +103,11 @@ for(i in 1:length(sto)){
 }
 length(sto2[!is.na(sto2)])
 # so no users have used usb devices with more than one pc
+
+
+
+
+
 
 # going to have to do this without loops after it works
 # for this user it's a 354*886 for loop
