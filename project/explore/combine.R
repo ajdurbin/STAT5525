@@ -245,22 +245,37 @@ insert_usb <- function(combo){
 #   test <- combo_filter(usr = usr)
 # )
 
-# create parallel cluster for later
-no_cores <- detectCores() - 1
-cl <- makeCluster(no_cores, type = "FORK")
-clusterExport(cl = cl, ls())
-
-# run for all users in parallel
-system.time(
-  big_data <- parSapply(cl = cl, unique(logon$user), 
-                                  function(g) combo_filter(usr = g))
-)
-
-# formatting
-big_data <- t(big_data)
-big_data <- as.data.frame(big_data, row.names = FALSE)
-for(i in 1:ncol(big_data)){
-  big_data[, i] <- as.vector(unlist(big_data[, i]))
+# slow for loop to get all users
+for(usr in unique(logon$user)){
+  
+  tmp <- combo_filter(usr = usr)
+  
+  if(exists("big_data")){
+    big_data <- rbind(big_data, tmp)
+  } else{
+    big_data <- tmp
+  }
+  
 }
 
-stopCluster(cl)
+write_csv(big_data, path = paste0(getwd(), "/big_data.csv"))
+
+# create parallel cluster for later
+# no_cores <- detectCores() - 1
+# cl <- makeCluster(no_cores, type = "FORK")
+# clusterExport(cl = cl, ls())
+# 
+# # run for all users in parallel
+# system.time(
+#   big_data <- parSapply(cl = cl, unique(logon$user), 
+#                                   function(g) combo_filter(usr = g))
+# )
+# 
+# # formatting
+# big_data <- t(big_data)
+# big_data <- as.data.frame(big_data, row.names = FALSE)
+# for(i in 1:ncol(big_data)){
+#   big_data[, i] <- as.vector(unlist(big_data[, i]))
+# }
+# 
+# stopCluster(cl)
