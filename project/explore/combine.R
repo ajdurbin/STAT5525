@@ -50,9 +50,6 @@ bad_sites <- c("facebook", "myspace", "twitter", "instagram", "pinterest",
 # function declarations ---------------------------------------------------
 
 
-# if cannot run on entire data set
-# usr <- unique(logon$user)[sample(1:length(logon), 1)]
-
 # return user summary
 combo_filter <- function(usr, log = logon, dev = device, web = http,
                          cur = current, total = emp, sites = bad_sites){
@@ -72,7 +69,7 @@ combo_filter <- function(usr, log = logon, dev = device, web = http,
     mutate(activity = ifelse(is.na(activity), "using", activity)) %>% 
     mutate(website = ifelse(is.na(website), "none", website)) %>% 
     mutate(usb = ifelse(is.na(usb), "none", usb)) %>% 
-    mutate(usb_mis_dis = NA) %>% 
+    mutate(usb_mis_dis = "", logoff_mis = "") %>% 
     as.data.frame()
   
   # now fill in missing usb disconnects
@@ -205,7 +202,8 @@ insert_usb <- function(combo){
                     time = as.hms(date),
                     usb = "",
                     website = "",
-                    usb_mis_dis = NA)
+                    usb_mis_dis = "",
+                    logoff_mis = "")
   
   # loop through and append matching rows to new_usb
   for(i in 1:(nrow(no_match)-1)){
@@ -235,9 +233,22 @@ insert_usb <- function(combo){
 
 
 # run for single user
+usr <- "ACME/KLS0717"
 system.time(
   test <- combo_filter(usr = usr)
 )
+# check disconnects equal connects
+test <- test %>%
+  arrange(date)
+usb <- test %>%
+  filter(usb != "none")
+nrow(usb)
+con <- test %>%
+  filter(usb == "Connect")
+dis <- test %>%
+  filter(usb == "Disconnect")
+nrow(con)
+nrow(dis)
 
 # create parallel cluster for later
 no_cores <- detectCores() - 1

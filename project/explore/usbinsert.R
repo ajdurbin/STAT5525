@@ -46,6 +46,9 @@ insert_usb <- function(combo){
 usr <- "ACME/KLS0717"
 test <- combo_filter(usr = usr)
 
+# want to check total usb disconnections for validation
+
+
 # # scratch for function ----------------------------------------------------
 # 
 # 
