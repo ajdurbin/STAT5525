@@ -3,6 +3,8 @@ options(stringsAsFactors = FALSE)
 rm(list = ls())
 library(tidyverse)
 library(parallel)
+library(lubridate)
+library(hms)
 
 
 # load and parse data -----------------------------------------------------
@@ -49,7 +51,7 @@ bad_sites <- c("facebook", "myspace", "twitter", "instagram", "pinterest",
 
 
 # if cannot run on entire data set
-usr <- unique(logon$user)[sample(1:length(logon), 1)]
+# usr <- unique(logon$user)[sample(1:length(logon), 1)]
 
 # return user summary
 combo_filter <- function(usr, log = logon, dev = device, web = http,
@@ -57,20 +59,27 @@ combo_filter <- function(usr, log = logon, dev = device, web = http,
   
   usr_log <- log %>% 
     filter(user == usr) %>% 
-    select(date, pc, activity, day, time)
+    select(user, date, pc, activity, day, time)
   usr_dev <- dev %>%
     filter(user == usr) %>% 
-    select(date, pc, usb, day, time)
+    select(user, date, pc, usb, day, time)
   # note some people do not use usb
   usr_web <- web %>% 
     filter(user == usr) %>% 
-    select(date, pc, website, day, time)
+    select(user, date, pc, website, day, time)
   # now adjust the na in activitiy, website, usb
   combo <- plyr::rbind.fill(usr_log, usr_dev, usr_web) %>% 
     mutate(activity = ifelse(is.na(activity), "using", activity)) %>% 
     mutate(website = ifelse(is.na(website), "none", website)) %>% 
     mutate(usb = ifelse(is.na(usb), "none", usb)) %>% 
+    mutate(usb_mis_dis = NA) %>% 
     as.data.frame()
+  
+  # now fill in missing usb disconnects
+  combo <- insert_usb(combo = combo)
+  
+  # now fill in missing logoffs/screen locks
+  # combo <- insert_logoff(combo = combo)
   
   # premature return for fixing consecutive connects/logons
   return(combo)
@@ -172,6 +181,52 @@ pc_prs <- function(combo){
   pckg <- data.frame(unq_pc = unq_pc, on = on, off = off, usb_con = usb_con,
                      prm_pc = prm_pc, prm_on = prm_pc_on, prm_off = prm_pc_off)
   
+  return(pckg)
+  
+}
+
+# fills in missing usb disconnects - used in combo_filter
+insert_usb <- function(combo){
+  
+  # split up
+  # usb connect/disconnects
+  no_match <- combo %>%
+    filter(usb != "none")
+  # no usb connects/disconnects
+  yes_match <- combo %>%
+    filter(usb == "none")
+  
+  # tmp storage
+  new_usb <- tibble(date = as_datetime(now()), 
+                    user = "",
+                    pc = "", 
+                    activity = "",
+                    day = as.Date(date),
+                    time = as.hms(date),
+                    usb = "",
+                    website = "",
+                    usb_mis_dis = NA)
+  
+  # loop through and append matching rows to new_usb
+  for(i in 1:(nrow(no_match)-1)){
+    # get next row for checking
+    cur <- no_match[i, ]
+    nxt <- no_match[i+1, ]
+    # check if they same, then create row and add to df
+    if(cur$usb == nxt$usb){
+      new_row <- cur
+      new_row$usb <- 'Disconnect'
+      new_row$usb_mis_dis <- TRUE
+      new_usb <- rbind(new_usb, new_row)
+    }
+  }
+  
+  # remove dummy row
+  new_usb <- new_usb[2:nrow(new_usb), ]
+  # add new matching rows
+  new_match <- rbind(no_match, new_usb)
+  # recombine total
+  pckg <- rbind(yes_match, new_match)
   return(pckg)
   
 }
