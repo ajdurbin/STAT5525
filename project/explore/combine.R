@@ -73,21 +73,24 @@ combo_filter <- function(usr, log = logon, dev = device, web = http,
     as.data.frame()
   
   # now fill in missing usb disconnects
-  combo <- insert_usb(combo = combo)
+  # combo <- insert_usb(combo = combo)
   
   # now fill in missing logoffs/screen locks
   # combo <- insert_logoff(combo = combo)
   
   # premature return for fixing consecutive connects/logons
-  return(combo)
+  # return(combo)
   
   name_info <- total %>% 
     filter(user == usr) %>% 
-    select(employee_name, Email) %>% 
+    select(employee_name) %>% 
+    # select(employee_name, Email) %>% 
     unique()
+  combo$name <- name_info$employee_name
   
   # 1 means attrition
   attrition <- ifelse(usr %in% cur$user, 0, 1)
+  combo$attrition <- attrition
   
   # count bad sites visits
   cnt <- 0
@@ -98,6 +101,7 @@ combo_filter <- function(usr, log = logon, dev = device, web = http,
   
   # standardize based on total web traffic
   cnt <- cnt / nrow(combo[combo$wesite != "none"])
+  combo$bad_sites <- cnt
   
   # find user roles
   roles <- total %>%
@@ -107,22 +111,25 @@ combo_filter <- function(usr, log = logon, dev = device, web = http,
   
   # collapse into char string separated by spaces
   roles <- paste0(as.character(roles$Role), collapse = " ")
-  
+  combo$role <- roles
+    
   # get miscellaneous pc information from total
   unq_pc <- pc_prs(combo = combo)
   
   # pckg for return
   # pckg <- list("user" = usr, "user_data" = combo, "attrition" = attrition,
   #              "bad site visits" = cnt, "roles" = roles)
-  pckg <- data.frame(name = name_info$employee_name, email = name_info$Email,
-                     user = usr, attrition = attrition, bad_sites = cnt, 
-                     roles = roles, primary_pc = unq_pc$prm_pc, 
-                     pc_count = unq_pc$unq_pc, num_on = unq_pc$on, 
-                     num_off = unq_pc$off, prm_num_on = unq_pc$prm_on, 
-                     prm_num_off = unq_pc$prm_off, usb_num = unq_pc$usb_con)
+  # pckg <- data.frame(name = name_info$employee_name, email = name_info$Email,
+  #                    user = usr, attrition = attrition, bad_sites = cnt, 
+  #                    roles = roles, primary_pc = unq_pc$prm_pc, 
+  #                    pc_count = unq_pc$unq_pc, num_on = unq_pc$on, 
+  #                    num_off = unq_pc$off, prm_num_on = unq_pc$prm_on, 
+  #                    prm_num_off = unq_pc$prm_off, usb_num = unq_pc$usb_con)
                
+  combo$primary_pc = unq_pc$prm_pc
+  combo$pc_count = unq_pc$unq_pc
   
-  return(pckg)
+  return(combo)
   
 }
 
@@ -233,22 +240,10 @@ insert_usb <- function(combo){
 
 
 # run for single user
-usr <- "ACME/KLS0717"
-system.time(
-  test <- combo_filter(usr = usr)
-)
-# check disconnects equal connects
-test <- test %>%
-  arrange(date)
-usb <- test %>%
-  filter(usb != "none")
-nrow(usb)
-con <- test %>%
-  filter(usb == "Connect")
-dis <- test %>%
-  filter(usb == "Disconnect")
-nrow(con)
-nrow(dis)
+# usr <- "ACME/KLS0717"
+# system.time(
+#   test <- combo_filter(usr = usr)
+# )
 
 # create parallel cluster for later
 no_cores <- detectCores() - 1
