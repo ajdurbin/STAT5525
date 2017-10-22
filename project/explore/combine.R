@@ -79,7 +79,7 @@ combo_filter <- function(usr, log = logon, dev = device, web = http,
   # combo <- insert_logoff(combo = combo)
   
   # premature return for fixing consecutive connects/logons
-  # return(combo)
+  return(combo)
   
   name_info <- total %>% 
     filter(user == usr) %>% 
@@ -224,6 +224,16 @@ insert_usb <- function(combo){
       new_row$usb_mis_dis <- TRUE
       new_usb <- rbind(new_usb, new_row)
     }
+  }
+  
+  # check last entry to make sure not lonely connect
+  if(tail(no_match$usb, n = 1) == "Connect"){
+    
+    new_row <- tail(no_match, n = 1)
+    new_row$usb <- 'Disconnect'
+    new_row$usb_mis_dis <- TRUE
+    new_usb <- rbind(new_usb, new_row)
+    
   }
   
   # remove dummy row
