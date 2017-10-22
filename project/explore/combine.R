@@ -88,8 +88,10 @@ combo_filter <- function(usr, log = logon, dev = device, web = http,
   combo <- combo %>%
     arrange(date)
   
-  # now fill in missing logoffs/screen locks
+  # # now fill in missing logoffs/screen locks
   # combo <- insert_logoff(combo = combo)
+  # combo <- combo %>% 
+  #   arrange(date)
   
   # premature return for fixing consecutive connects/logons
   return(combo)
@@ -284,6 +286,106 @@ insert_usb <- function(combo){
     arrange(date)
   
   return(pckg)
+  
+}
+
+# fills in missing logoffs - used in combo_filter
+insert_logoff <- function(combo){
+  
+  # unique pc
+  all_pc <- unique(combo$pc) # 52 different pc
+  
+  # total storage 
+  sto <- tibble(date = "", 
+                user = "",
+                pc = "", 
+                activity = "",
+                day = "",
+                time = "",
+                usb = "",
+                website = "",
+                usb_mis_dis = "",
+                logoff_mis = "")
+  
+  
+  for(the_pc in all_pc){
+    
+    # tmp storage
+    tmp <- tibble(date = "", 
+                user = "",
+                pc = "", 
+                activity = "",
+                day = "",
+                time = "",
+                usb = "",
+                website = "",
+                usb_mis_dis = "",
+                logoff_mis = "")
+      
+    # get entries for that pc
+    # split into logon/logoff and using
+    no_match  <- combo %>%
+      filter(pc == the_pc, activity != "using")
+    yes_match <- combo %>%
+      filter(pc == the_pc, activity == "using")
+    
+    # loop through the rows and find consecutive logon
+    # create new row and add to sto
+    for(i in 1:(nrow(no_match)-1)){
+      # get next row for checking
+      cur <- no_match[i, ]
+      nxt <- no_match[i+1, ]
+      # check if they same, then create row and add to df
+      if(cur$activity == nxt$activity){
+        # flag original entry
+        no_match[i, ]$logoff_mis <- TRUE
+        new_row <- cur
+        # flag new entry
+        new_row$activity <- 'Logoff'
+        new_row$logoff_mis <- TRUE
+        tmp <- rbind(tmp, new_row)
+      }
+    }
+    
+    # double check that last row is not a logon
+    # if so then create new row and add to sto
+    if(tail(no_match$activity, n = 1) == "Logon"){
+      
+      new_row <- tail(no_match, n = 1)
+      # flag new entry
+      new_row$activity <- 'Logoff'
+      new_row$logoff_dis <- TRUE
+      tmp <- rbind(tmp, new_row)
+      # flag original entry
+      no_match[nrow(no_match), ]$logoff_mis <- TRUE
+      
+    }
+    
+    # remove dummy row if any were added to new_usb and combine with no_match
+    if(nrow(tmp) != 1){
+      tmp <- tmp[2:nrow(tmp), ]
+      new_match <- rbind(no_match, tmp)
+    } else{
+      new_match <- no_match
+    }
+    
+    # recombine new_match with yes_match
+    if(nrow(yes_match) != 0){
+      pckg <- rbind(yes_match, new_match)
+    } else{
+      pckg <- new_match
+    }
+    
+    sto <- rbind(sto, pckg)
+    
+  }
+  
+  # remove dummy row
+  sto <- sto[2:nrow(sto), ]
+  sto <- sto %>%
+    arrange(date)
+  
+  return(sto)
   
 }
 
