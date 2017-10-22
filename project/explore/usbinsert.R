@@ -17,7 +17,8 @@ insert_usb <- function(combo){
                     time = as.hms(date),
                     usb = "",
                     website = "",
-                    usb_mis_dis = NA)
+                    usb_mis_dis = "",
+                    logoff_mis = "")
   
   # loop through and append matching rows to new_usb
   for(i in 1:(nrow(no_match)-1)){
@@ -33,6 +34,16 @@ insert_usb <- function(combo){
     }
   }
   
+  # check last entry to make sure not lonely connect
+  if(tail(no_match$usb, n = 1) == "Connect"){
+    
+    new_row <- tail(no_match, n = 1)
+    new_row$usb <- 'Disconnect'
+    new_row$usb_mis_dis <- TRUE
+    new_usb <- rbind(new_usb, new_row)
+    
+  }
+  
   # remove dummy row
   new_usb <- new_usb[2:nrow(new_usb), ]
   # add new matching rows
@@ -45,9 +56,35 @@ insert_usb <- function(combo){
 
 usr <- "ACME/KLS0717"
 test <- combo_filter(usr = usr)
+# get usb traffic to check consecutive connects
+usb <- test %>%
+  filter(usb != "none")
 
-# want to check total usb disconnections for validation
+# filter to make smaller and better visualize the differences
+usb <- usb[c(1,2,3,5,6,7),]
+usb <- insert_usb(usb)
 
+# usb users for more robust testing of only one pc
+bd <- read_csv("big_data.csv")
+usb_users <- bd %>% 
+  filter(usb != "none")
+usb_users <- unique(usb_users$user)
+# loop through usb users and count how many pc they use
+usb_users_pc_count <- rep(0,length(usb_users))
+for(i in 1:length(usb_users)){
+  
+  usr <- usb_users[i]
+  
+  tmp <- device %>% 
+    filter(user == usr) %>% 
+    select(pc) %>% 
+    unique() %>% 
+    nrow()
+  
+ usb_users_pc_count[i] = tmp 
+  
+}
+max(usb_users_pc_count)
 
 # # scratch for function ----------------------------------------------------
 # 
