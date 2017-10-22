@@ -8,6 +8,11 @@ insert_usb <- function(combo){
   yes_match <- combo %>%
     filter(usb == "none")
   
+  # if user has no usb traffic at all
+  if(nrow(no_match) == 0){
+    return(combo)
+  }
+  
   # tmp storage
   new_usb <- tibble(date = as_datetime(now()), 
                     user = "",
@@ -27,7 +32,10 @@ insert_usb <- function(combo){
     nxt <- no_match[i+1, ]
     # check if they same, then create row and add to df
     if(cur$usb == nxt$usb){
+      # flag original entry
+      no_match[i, ]$usb_mis_dis <- TRUE
       new_row <- cur
+      # flag new entry
       new_row$usb <- 'Disconnect'
       new_row$usb_mis_dis <- TRUE
       new_usb <- rbind(new_usb, new_row)
@@ -38,18 +46,29 @@ insert_usb <- function(combo){
   if(tail(no_match$usb, n = 1) == "Connect"){
     
     new_row <- tail(no_match, n = 1)
+    # flag new entry
     new_row$usb <- 'Disconnect'
     new_row$usb_mis_dis <- TRUE
     new_usb <- rbind(new_usb, new_row)
+    # flag original entry
+    no_match[nrow(no_match), ]$usb_mis_dis <- TRUE
     
   }
   
-  # remove dummy row
-  new_usb <- new_usb[2:nrow(new_usb), ]
-  # add new matching rows
-  new_match <- rbind(no_match, new_usb)
-  # recombine total
-  pckg <- rbind(yes_match, new_match)
+  # remove dummy row if any were added to new_usb and combine with no_match
+  if(nrow(new_usb) != 1){
+    new_usb <- new_usb[2:nrow(new_usb), ]
+    new_match <- rbind(no_match, new_usb)
+  } else{
+    new_match <- no_match
+  }
+  
+  # recombine new_match with yes_match
+  if(nrow(yes_match) != 0){
+    pckg <- rbind(yes_match, new_match)
+  } else{
+    pckg <- new_match
+  }
   return(pckg)
   
 }
@@ -61,9 +80,47 @@ usb <- test %>%
   filter(usb != "none")
 
 # filter to make smaller and better visualize the differences
-usb <- usb[c(1,2,3,5,6,7),]
+usb <- usb[1:50,]
 usb <- insert_usb(usb)
+usb <- usb %>% 
+  arrange(date)
+# looks like it's working and robust to needing no insertions
 
+# now need to test on users with no usb at all
+usr <- "ACME/JDR0685"
+test <- combo_filter(usr = usr)
+nrow(test)
+# get usb traffic to check consecutive connects
+usb <- insert_usb(test)
+nrow(usb)
+# returns true, so if user has no usb information this will just
+# return the dataframe quickly and not add other information
+all.equal(usb,test)
+
+# now check on the above user but their entire traffic now
+usr <- "ACME/KLS0717"
+test <- combo_filter(usr = usr)
+usb <- insert_usb(test)
+usb <- usb %>% 
+  arrange(date)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# check usb users -----------------------------------
 # usb users for more robust testing of only one pc
 bd <- read_csv("big_data.csv")
 usb_users <- bd %>% 

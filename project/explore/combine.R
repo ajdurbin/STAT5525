@@ -14,18 +14,24 @@ logon <- read_csv('~/data_analytics/DataSets1_9182017/logon_info.csv')
 logon$date <- lubridate::mdy_hms(logon$date)
 logon$time <- hms::as.hms(logon$date)
 logon$day <- lubridate::as_date(logon$date)
+logon <- logon %>% 
+  arrange(date)
 
 device <- read_csv('~/data_analytics/DataSets1_9182017/device_info.csv')
 colnames(device)[5] <- "usb"
 device$date <- lubridate::mdy_hms(device$date)
 device$time <- hms::as.hms(device$date)
 device$day <- lubridate::as_date(device$date)
+device <- device %>% 
+  arrange(date)
 
 http <- read_csv('~/data_analytics/DataSets1_9182017/http_info.csv', col_names = FALSE)
 colnames(http) <- c("id", "date", "user", "pc", "website")
 http$date <- lubridate::mdy_hms(http$date)
 http$time <- hms::as.hms(http$date)
 http$day <- lubridate::as_date(http$date)
+http <- http %>% 
+  arrange(date)
 
 # current employee from most recent employee data set
 current <- read_csv("~/data_analytics/DataSets1_9182017/Employees_info/2011-May.csv")
@@ -70,10 +76,17 @@ combo_filter <- function(usr, log = logon, dev = device, web = http,
     mutate(website = ifelse(is.na(website), "none", website)) %>% 
     mutate(usb = ifelse(is.na(usb), "none", usb)) %>% 
     mutate(usb_mis_dis = "", logoff_mis = "") %>% 
+    # convert date/time to string to preserve type throughout
+    mutate(date = as.character(date), time = as.character(time),
+           day = as.character(day)) %>% 
     as.data.frame()
+  combo <- combo %>%
+    arrange(date)
   
   # now fill in missing usb disconnects
-  # combo <- insert_usb(combo = combo)
+  combo <- insert_usb(combo = combo)
+  combo <- combo %>%
+    arrange(date)
   
   # now fill in missing logoffs/screen locks
   # combo <- insert_logoff(combo = combo)
@@ -128,6 +141,9 @@ combo_filter <- function(usr, log = logon, dev = device, web = http,
                
   combo$primary_pc = unq_pc$prm_pc
   combo$pc_count = unq_pc$unq_pc
+  
+  combo <- combo %>%
+    arrange(date)
   
   return(combo)
   
@@ -190,6 +206,8 @@ pc_prs <- function(combo){
 }
 
 # fills in missing usb disconnects - used in combo_filter
+# need not take into account usr with multiple pcs usb usage
+# since there are 228 unique users and 228 unique pcs
 insert_usb <- function(combo){
   
   # split up
@@ -200,13 +218,18 @@ insert_usb <- function(combo){
   yes_match <- combo %>%
     filter(usb == "none")
   
+  # if user has no usb traffic at all
+  if(nrow(no_match) == 0){
+    return(combo)
+  }
+  
   # tmp storage
-  new_usb <- tibble(date = as_datetime(now()), 
+  new_usb <- tibble(date = "", 
                     user = "",
                     pc = "", 
                     activity = "",
-                    day = as.Date(date),
-                    time = as.hms(date),
+                    day = "",
+                    time = "",
                     usb = "",
                     website = "",
                     usb_mis_dis = "",
@@ -219,7 +242,10 @@ insert_usb <- function(combo){
     nxt <- no_match[i+1, ]
     # check if they same, then create row and add to df
     if(cur$usb == nxt$usb){
+      # flag original entry
+      no_match[i, ]$usb_mis_dis <- TRUE
       new_row <- cur
+      # flag new entry
       new_row$usb <- 'Disconnect'
       new_row$usb_mis_dis <- TRUE
       new_usb <- rbind(new_usb, new_row)
@@ -230,18 +256,33 @@ insert_usb <- function(combo){
   if(tail(no_match$usb, n = 1) == "Connect"){
     
     new_row <- tail(no_match, n = 1)
+    # flag new entry
     new_row$usb <- 'Disconnect'
     new_row$usb_mis_dis <- TRUE
     new_usb <- rbind(new_usb, new_row)
+    # flag original entry
+    no_match[nrow(no_match), ]$usb_mis_dis <- TRUE
     
   }
   
-  # remove dummy row
-  new_usb <- new_usb[2:nrow(new_usb), ]
-  # add new matching rows
-  new_match <- rbind(no_match, new_usb)
-  # recombine total
-  pckg <- rbind(yes_match, new_match)
+  # remove dummy row if any were added to new_usb and combine with no_match
+  if(nrow(new_usb) != 1){
+    new_usb <- new_usb[2:nrow(new_usb), ]
+    new_match <- rbind(no_match, new_usb)
+  } else{
+    new_match <- no_match
+  }
+  
+  # recombine new_match with yes_match
+  if(nrow(yes_match) != 0){
+    pckg <- rbind(yes_match, new_match)
+  } else{
+    pckg <- new_match
+  }
+  
+  pckg <- pckg %>% 
+    arrange(date)
+  
   return(pckg)
   
 }
@@ -256,36 +297,50 @@ insert_usb <- function(combo){
 # )
 
 # slow for loop to get all users
-for(usr in unique(logon$user)){
-  
-  tmp <- combo_filter(usr = usr)
-  
-  if(exists("big_data")){
-    big_data <- rbind(big_data, tmp)
-  } else{
-    big_data <- tmp
-  }
-  
-}
-
-write_csv(big_data, path = paste0(getwd(), "/big_data.csv"))
-
-# create parallel cluster for later
-# no_cores <- detectCores() - 1
-# cl <- makeCluster(no_cores, type = "FORK")
-# clusterExport(cl = cl, ls())
+# for(usr in unique(logon$user)){
+#   
+#   tmp <- combo_filter(usr = usr)
+#   
+#   if(exists("big_data")){
+#     big_data <- rbind(big_data, tmp)
+#   } else{
+#     big_data <- tmp
+#   }
+#   
+# }
 # 
-# # run for all users in parallel
-# system.time(
-#   big_data <- parSapply(cl = cl, unique(logon$user), 
-#                                   function(g) combo_filter(usr = g))
-# )
-# 
-# # formatting
+# write_csv(big_data, path = paste0(getwd(), "/big_data.csv"))
+
+#try not in parallel for debuuging
+# big_data <- sapply(unique(logon$user), function(g) combo_filter(usr = g))
+# formatting
 # big_data <- t(big_data)
 # big_data <- as.data.frame(big_data, row.names = FALSE)
+# this is where error occurs
 # for(i in 1:ncol(big_data)){
 #   big_data[, i] <- as.vector(unlist(big_data[, i]))
 # }
-# 
-# stopCluster(cl)
+
+# create parallel cluster for later
+no_cores <- detectCores() - 1
+cl <- makeCluster(no_cores, type = "FORK")
+clusterExport(cl = cl, ls())
+
+# run for all users in parallel
+system.time(
+  big_data <- parSapply(cl = cl, unique(logon$user),
+                                  function(g) combo_filter(usr = g))
+)
+
+# not storing dates properly, cannot recover them without slow for loop
+
+# formatting
+big_data <- t(big_data)
+big_data <- as.data.frame(big_data, row.names = FALSE)
+big_data <- sapply(big_data, unlist)
+big_data <- as.data.frame(big_data)
+# for(i in 1:ncol(big_data)){
+#   big_data[, i] <- as.vector(unlist(big_data[, i]))
+# }
+
+stopCluster(cl)
