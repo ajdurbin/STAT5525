@@ -67,10 +67,10 @@ nrow(tmp %>% filter(activity == "Logoff"))
 
 usr <- "ACME/KLS0717" # test user
 test <- combo_filter(usr = usr) # get their combined data
-# test <- test[c(1:7,27:28,35:36), ]
+test <- test[c(1:7,27,35), ]
 # now test it for when someone only logs into a pc once
 # with no other activity
-test <- test[1, ]
+# test <- test[1, ]
 
 insert_logoff <- function(combo){
   
@@ -110,6 +110,31 @@ insert_logoff <- function(combo){
       filter(pc == the_pc, activity != "using")
     yes_match <- combo %>%
       filter(pc == the_pc, activity == "using")
+    
+    # check if there's only one observation and continue to next pc
+    if(nrow(no_match) == 1){
+      
+      no_match[1, ]$logoff_mis <- TRUE
+      new_row <- no_match[1, ]
+      # flag new entry
+      new_row$activity <- 'Logoff'
+      new_row$logoff_mis <- TRUE
+      tmp <- rbind(tmp, new_row)
+      
+      tmp <- tmp[2:nrow(tmp), ]
+      new_match <- rbind(no_match, tmp)
+      
+      # recombine new_match with yes_match
+      if(nrow(yes_match) != 0){
+        pckg <- rbind(yes_match, new_match)
+      } else{
+        pckg <- new_match
+      }
+      
+      sto <- rbind(sto, pckg) 
+      next
+      
+    }
     
     # loop through the rows and find consecutive logon
     # create new row and add to sto

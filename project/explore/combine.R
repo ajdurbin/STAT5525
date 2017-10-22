@@ -89,12 +89,12 @@ combo_filter <- function(usr, log = logon, dev = device, web = http,
     arrange(date)
   
   # # now fill in missing logoffs/screen locks
-  # combo <- insert_logoff(combo = combo)
-  # combo <- combo %>% 
-  #   arrange(date)
+  combo <- insert_logoff(combo = combo)
+  combo <- combo %>%
+    arrange(date)
   
   # premature return for fixing consecutive connects/logons
-  return(combo)
+  # return(combo)
   
   name_info <- total %>% 
     filter(user == usr) %>% 
@@ -115,7 +115,7 @@ combo_filter <- function(usr, log = logon, dev = device, web = http,
   }
   
   # standardize based on total web traffic
-  cnt <- cnt / nrow(combo[combo$wesite != "none"])
+  # cnt <- cnt / nrow(combo[combo$website != "none"])
   combo$bad_sites <- cnt
   
   # find user roles
@@ -293,7 +293,7 @@ insert_usb <- function(combo){
 insert_logoff <- function(combo){
   
   # unique pc
-  all_pc <- unique(combo$pc) # 52 different pc
+  all_pc <- unique(combo$pc)
   
   # total storage 
   sto <- tibble(date = "", 
@@ -312,22 +312,47 @@ insert_logoff <- function(combo){
     
     # tmp storage
     tmp <- tibble(date = "", 
-                user = "",
-                pc = "", 
-                activity = "",
-                day = "",
-                time = "",
-                usb = "",
-                website = "",
-                usb_mis_dis = "",
-                logoff_mis = "")
-      
+                  user = "",
+                  pc = "", 
+                  activity = "",
+                  day = "",
+                  time = "",
+                  usb = "",
+                  website = "",
+                  usb_mis_dis = "",
+                  logoff_mis = "")
+    
     # get entries for that pc
     # split into logon/logoff and using
     no_match  <- combo %>%
       filter(pc == the_pc, activity != "using")
     yes_match <- combo %>%
       filter(pc == the_pc, activity == "using")
+    
+    # check if there's only one observation and continue to next pc
+    if(nrow(no_match) == 1){
+      
+      no_match[1, ]$logoff_mis <- TRUE
+      new_row <- no_match[1, ]
+      # flag new entry
+      new_row$activity <- 'Logoff'
+      new_row$logoff_mis <- TRUE
+      tmp <- rbind(tmp, new_row)
+      
+      tmp <- tmp[2:nrow(tmp), ]
+      new_match <- rbind(no_match, tmp)
+      
+      # recombine new_match with yes_match
+      if(nrow(yes_match) != 0){
+        pckg <- rbind(yes_match, new_match)
+      } else{
+        pckg <- new_match
+      }
+      
+      sto <- rbind(sto, pckg) 
+      next
+      
+    }
     
     # loop through the rows and find consecutive logon
     # create new row and add to sto
@@ -411,17 +436,13 @@ insert_logoff <- function(combo){
 #   
 # }
 # 
-# write_csv(big_data, path = paste0(getwd(), "/big_data.csv"))
 
-#try not in parallel for debuuging
+# try not in parallel for debuuging
 # big_data <- sapply(unique(logon$user), function(g) combo_filter(usr = g))
-# formatting
 # big_data <- t(big_data)
 # big_data <- as.data.frame(big_data, row.names = FALSE)
-# this is where error occurs
-# for(i in 1:ncol(big_data)){
-#   big_data[, i] <- as.vector(unlist(big_data[, i]))
-# }
+# big_data <- parsapply(big_data, unlist)
+# big_data <- as.data.frame(big_data)
 
 # create parallel cluster for later
 no_cores <- detectCores() - 1
@@ -434,15 +455,14 @@ system.time(
                                   function(g) combo_filter(usr = g))
 )
 
-# not storing dates properly, cannot recover them without slow for loop
-
 # formatting
 big_data <- t(big_data)
 big_data <- as.data.frame(big_data, row.names = FALSE)
-big_data <- sapply(big_data, unlist)
+big_data <- parSapply(cl, big_data, unlist)
 big_data <- as.data.frame(big_data)
-# for(i in 1:ncol(big_data)){
-#   big_data[, i] <- as.vector(unlist(big_data[, i]))
-# }
+big_data <- big_data %>% 
+  arrange(date)
 
 stopCluster(cl)
+
+write_csv(big_data, path = paste0(getwd(), "/big_data.csv"))
