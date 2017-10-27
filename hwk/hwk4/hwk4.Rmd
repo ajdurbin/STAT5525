@@ -1,0 +1,218 @@
+---
+title: "Homework 4"
+subtitle: "Data Analytics"
+author: "Alexander Durbin"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(tidyverse)
+library(mvtnorm)
+set.seed(12345)
+```
+
+# TODO
+- problem 3 adjusted rand index
+- problem 1 limiting case and discussion
+- problem 4 discuss links and compare, do I need dendograms for the other methods? How to compare?
+- problem 5 variable selection and classification
+
+# Problem 2
+
+```{r}
+
+# load data
+raw <- read.table("ClusterSet1.txt")
+
+sto <- rep(0, 10)
+for(i in 1:10){
+  sto[i] <- kmeans(x = raw, centers = i, iter.max = 100)$tot.withinss
+}
+
+ggplot() +
+  geom_point(mapping = aes(x = 1:10, y = sto)) +
+  ggtitle("Scree Plot For k-Means Clustering") +
+  xlab("Number Of Clusters") +
+  ylab("Total Within Clusters Sum Of Squares") +
+  xlim(0, 10) +
+  ylim(min(sto), max(sto))
+
+```
+
+The Scree plot shows that six clusters explain the majority of the variability in this data. There are marginal decreases in variability for $k>6$, .
+
+The following code gives the centroids for *k*-Means for $k=6$.
+
+```{r, echo = TRUE}
+
+kmeans(x = raw, centers = 6, iter.max = 100)$centers
+
+```
+
+# Problem 3
+
+The likelihood for the Gaussian mixture model is given by
+\begin{align*}
+\mathcal{L}(\mu_j, \Sigma_j, \pi_j | \underline{x})=\prod_{i=1}^n \sum_{j=1}^k \pi_j \mathcal{N}(x_i | \mu_j, \Sigma_j).
+\end{align*}
+With log-likelihood 
+\begin{align*}
+log \mathcal{L}(\mu_j, \Sigma_j, \pi_j | \underline{x}) = \sum_{i=1}^n log \sum_{j=1}^k \pi_j \mathcal{N}(x_i | \mu_j, \Sigma_j).
+\end{align*}
+
+## Part a
+
+\begin{align*}
+\frac{\partial log \mathcal{L}(\mu_j, \Sigma_j, \pi_j | \underline{x})}{\partial \mu_j} &= \sum_{i=1}^{n} \frac{\partial}{\partial \mu_j} log \sum_{j=1}^{k} \pi_j \mathcal{N}(x_i | \mu_j, \Sigma_j)\\
+&= \sum_{i=1}^{n} \frac{1}{\sum_{j=1}^{k} \pi_j \mathcal{N}(x_i | \mu_j, \Sigma_j)} \frac{\partial}{\partial \mu_j}  \pi_j \mathcal{N}(x_i | \mu_j, \Sigma_j) \\
+&=  \sum_{i=1}^{n} \frac{1}{\sum_{j=1}^{k} \pi_j \mathcal{N}(x_i | \mu_j, \Sigma_j)} (x_i-\mu_j)^T \Sigma^{-1}_j   \pi_j \mathcal{N}(x_i | \mu_j, \Sigma_j) \\
+&=  \sum_{i=1}^{n} \pi_{i,j} (x_i-\mu_j)^T \Sigma^{-1}_j
+\end{align*}
+
+\begin{align*}
+\frac{\partial log \mathcal{L}(\mu_j, \Sigma_j, \pi_j | \underline{x})}{\partial \mu_j}=0 &\implies  \sum_{i=1}^{n} \pi_{i,j} (x_i-\mu_j)^T \Sigma^{-1}_j=0\\
+&\implies  \sum_{i=1}^{n} \pi_{i,j}x_i=  \sum_{i=1}^{n} \pi_{i,j}\mu_j \\
+&\implies \hat{\mu}_{j}=\frac{ \sum_{i=1}^{n} \pi_{i,j}x_i}{\sum_{i=1}^{n} \pi_{i,j}}
+\end{align*}
+
+## Part b
+
+\begin{align*}
+\frac{\partial log \mathcal{L}(\mu_j, \Sigma_j, \pi_j | \underline{x})}{\partial \Sigma^{-1}_j} &=  \sum_{i=1}^{n} \frac{\partial}{\partial  \Sigma^{-1}_j} log \sum_{j=1}^{k} \pi_j \mathcal{N}(x_i | \mu_j, \Sigma_j) \\
+&= \sum_{i=1}^{n} \frac{1}{\sum_{j=1}^{k} \pi_j \mathcal{N}(x_i | \mu_j, \Sigma_j)} \frac{\partial}{\partial \Sigma^{-1}_j}  \pi_j \mathcal{N}(x_i | \mu_j, \Sigma_j) \\
+&= \sum_{i=1}^{n} \frac{1}{\sum_{j=1}^{k} \pi_j \mathcal{N}(x_i | \mu_j, \Sigma_j)} [-\frac{1}{2}(x_i-\mu_j)(x_i-\mu_j)^T+\frac{1}{2}\Sigma_j]   \pi_j \mathcal{N}(x_i | \mu_j, \Sigma_j) \\
+&= \sum_{i=1}^{n} \pi_{i,j}  [-\frac{1}{2}(x_i-\mu_j)(x_i-\mu_j)^T+\frac{1}{2}\Sigma_j]
+\end{align*}
+
+\begin{align*}
+\frac{\partial log \mathcal{L}(\mu_j, \Sigma_j, \pi_j | \underline{x})}{\partial \Sigma^{-1}_j}=0 &\implies   \sum_{i=1}^{n} \pi_{i,j}  [-\frac{1}{2}(x_i-\mu_j)(x_i-\mu_j)^T+\frac{1}{2}\Sigma_j]=0\\
+&\implies \hat{\Sigma}_j=\frac{\sum_{i=1}^{n} \pi_{i,j} (x_i-\mu_j)(x_i-\mu_j)^T}{\sum_{i=1}^{n} \pi_{i,j}}
+\end{align*}
+
+## Part c
+
+Our implimentation of the EM algorithm is the following code. 
+
+```{r, echo = TRUE}
+
+
+## expectation step
+## find probability of each cluster for each point
+E.step <- function(X, phi, N) {
+  
+  h <-
+    with(phi, do.call(cbind,
+                      lapply(1:N, function(i)
+                        dmvnorm(X, mu[[i]], sig[[i]]))))
+  
+  return(h/rowSums(h))  #Normalize
+  
+}
+
+## maximization step
+## given the probability of each cluster for each point
+## find the values of mu, sigma, and alpha that maximize likelihood
+M.step <- function(X, h, N) {
+  
+  covs <- lapply(1:N, function(i) cov.wt(X, h[,i]))
+  mu <- lapply(covs, "[[", "center")
+  sig <- lapply(covs, "[[", "cov")
+  alpha <- colMeans(h)
+  
+  return(list(mu = mu, sig = sig, alpha = alpha))
+  
+}
+
+## log.likelihood
+## given points and parameters, how well does model fit
+## also gives terminating condition 
+## stop if don't improve much
+log.like <- function(X, phi, N) {
+  
+  probs <- 
+    with(phi, do.call(cbind,
+                      lapply(1:N, function(i)
+                        alpha[i] * dmvnorm(X, mu[[i]], sig[[i]]))))
+  
+  return(sum(log(rowSums(probs))))
+  
+}
+
+## main program
+## X = dataset
+## N = number of clusters
+## Terminate if log.like(t-1) - log.like(t) is below a threshold
+run.em <- function(X, N, max.iter = 30) {
+  
+  # get initial estimates of means and covariances for each cluster
+  # randomly sample 30 points and build estimates
+  # covs is list of lists
+  # first list is list of first cluster information
+  # etc
+  covs <- replicate(N, list(cov.wt(X[sample(nrow(X), 30),])))
+  
+  # list of cluster means
+  mu <- lapply(covs, "[[", "center")
+  
+  # list of cluster variances
+  sig <- lapply(covs, "[[", "cov")
+  
+  # weights
+  alpha <- rep(1 / N, N)
+  
+  # list of lists of parameters for each cluster
+  phi <<- list(mu = mu, sig = sig, alpha = alpha)
+  
+  # repeat until convergence or maximum iterations reached
+  for(i in 1:max.iter) {
+    
+    oldphi <- phi
+    # e step
+    h <<- E.step(X, phi, N)
+    # m step
+    phi <<- M.step(X, h, N)
+    
+    # check for convergence with log-likelihood
+    if((log.like(X, phi, N) - log.like(X, oldphi, N)) < 0.01)
+      break
+  }
+  
+  # return cluster information
+  return(phi)
+  
+}
+
+```
+
+And the following code gives the results for six clusters.
+
+```{r, echo=TRUE}
+
+run.em(X = raw, N = 6, max.iter = 100)$mu
+kmeans(x = raw, centers = 6, iter.max = 100)$centers
+
+```
+
+We see that the results are drastically different.
+
+## Problem 4
+
+The following plots are dendograms by link function.
+
+```{r}
+
+plot(hclust(dist(raw), method = "single"), main = "Single-Linkage Dendogram")
+plot(hclust(dist(raw), method = "complete"), main = "Complete-Linkage Dendogram")
+plot(hclust(dist(raw), method = "average"), main = "Average-Linkage Dendogram")
+
+```
+
+# Problem 5
+
+```{r}
+
+raw <- read.table("ClusterSet2.txt")
+
+```
