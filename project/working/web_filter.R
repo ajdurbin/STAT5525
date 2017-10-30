@@ -82,6 +82,9 @@ library(stringr)
 library(lubridate)
 library(hms)
 
+# tld
+# am, cn, co, com, eu, fm, gov, li, me, net, org, ph, tv, uk, us
+
 big_data <- read_csv("big_data.csv")
 
 big_data <- big_data %>% 
@@ -89,6 +92,7 @@ big_data <- big_data %>%
   mutate(logoff_mis = ifelse(is.na(logoff_mis), "", logoff_mis))
 
 unique_users <- unique(big_data$user)
+# usr <- sample(unique_users, 1)
 
 for(usr in unique_users){
   
@@ -111,14 +115,24 @@ for(usr in unique_users){
   dif <- as.numeric(dif)
   dif <- dif/60
   
+  # want to get the run lengths for people spamming websites too quickly
+  # so need to somehow incorporate the comparison and run lengths at 
+  # same time
+  # so do in two steps i think
+  # get dif < 1 and then do run length and count groups more than 5
+  small_dif <- na.omit(dif) < 1
+  run_lengths <- rle(small_dif)
+  runs <- sum(run_lengths$lengths >= 5)
+  
+  
   # get most visited website
-  web_table <- data.frame(table(usr_web$website))
-  web_table <- web_table %>% 
-    arrange(desc(Freq))
+  # web_table <- data.frame(table(usr_web$website))
+  # web_table <- web_table %>% 
+  #   arrange(desc(Freq))
   # separate the tld from the domains
   # want to transpose it and cbind it with row later
-  tld <- str_extract(string = web_table$Var1, pattern = "[^.]*$")
-  tld_table <- data.frame(table(tld))
+  # tld <- str_extract(string = web_table$Var1, pattern = "[^.]*$")
+  # tld_table <- data.frame(table(tld))
   
   
   # row
@@ -127,11 +141,26 @@ for(usr in unique_users){
     primary_pc = unique(usr_web$primary_pc),
     total_pc_count = unique(usr_web$pc_count),
     web_pc_count = length(usr_pcs),
+    qck_web_runs = runs,
     qck_web_lt_1_min = sum(na.omit(dif) < 1),
     qck_web_lt_5_min = sum(na.omit(dif) < 5),
     role = unique(usr_web$role),
     attrition = unique(usr_web$attrition),
-    most_visited = web_table$Var1[1]
+    num_am = sum(endsWith(usr_web$website, ".am")),
+    num_cn = sum(endsWith(usr_web$website, ".cn")),
+    num_co = sum(endsWith(usr_web$website, ".co")),
+    num_com = sum(endsWith(usr_web$website, ".com")),
+    num_eu = sum(endsWith(usr_web$website, ".eu")),
+    num_fm = sum(endsWith(usr_web$website, ".fm")),
+    num_gov = sum(endsWith(usr_web$website, ".gov")),
+    num_li = sum(endsWith(usr_web$website, ".li")),
+    num_me = sum(endsWith(usr_web$website, ".me")),
+    num_net = sum(endsWith(usr_web$website, ".net")),
+    num_org = sum(endsWith(usr_web$website, ".org")),
+    num_ph = sum(endsWith(usr_web$website, ".ph")),
+    num_tv = sum(endsWith(usr_web$website, ".tv")),
+    num_uk = sum(endsWith(usr_web$website, ".uk")),
+    num_us = sum(endsWith(usr_web$website, ".us"))
   )
   
   if(!exists("web_distribution")){
