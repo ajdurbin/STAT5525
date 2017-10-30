@@ -229,3 +229,73 @@ saveGIF({
     
   }
 }, movie.name = "web.gif", interval = 1, nmax = 1000)
+
+
+# gifs without faceting on the missing traffic ----------------------------
+
+rm(list = ls())
+big_data <- read_csv("big_data.csv")
+names(big_data)
+unique(big_data$role)
+
+saveGIF({
+  for(usr in unique(big_data$user)){
+    
+    # get user data
+    usr_data <- big_data %>% 
+      filter(user == usr)
+    
+    # make indicator variables for each of the objectives
+    usr_data <- usr_data %>% 
+      mutate(indicator_on = ifelse(activity == "Logon", 1, 0)) %>% 
+      mutate(indicator_off = ifelse(activity == "Logoff", 1, 0)) %>% 
+      mutate(indicator_con = ifelse(usb == "Connect", 1, 0)) %>% 
+      mutate(indicator_dis = ifelse(usb == "Disconnect", 1, 0)) %>% 
+      mutate(indicator_web = ifelse(website != "none", 1, 0)) %>% 
+      mutate(usb_mis_dis = ifelse(is.na(usb_mis_dis), FALSE, TRUE)) %>% 
+      mutate(logoff_mis = ifelse(is.na(logoff_mis), FALSE, TRUE))
+    
+    # filter to indicator traffic for plots
+    on <- usr_data %>% 
+      filter(indicator_on == 1)
+    off <- usr_data %>% 
+      filter(indicator_off == 1)
+    con <- usr_data %>% 
+      filter(indicator_con == 1)
+    dis <- usr_data %>% 
+      filter(indicator_dis == 1)
+    web <- usr_data %>% 
+      filter(indicator_web == 1)
+    
+    # # logon/logoffs
+    # p <- ggplot() +
+    #   geom_point(mapping = aes(x = day, y = time), data = on, alpha = 0.5, color = "blue") +
+    #   geom_point(mapping = aes(x = day, y = time), data = off, alpha = 0.5, color = "red") +
+    #   scale_x_date(date_breaks='2 weeks', date_minor_breaks = "1 weeks") +
+    #   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+    #   ggtitle(paste0(usr, " Logon/Logoffs"))
+    # print(p)
+
+    # connect/disconnects
+    # if(nrow(con) != 0){
+    # 
+    #   p <- ggplot() +
+    #     geom_point(mapping = aes(x = day, y = time), data = con, alpha = 0.5, color = "blue") +
+    #     geom_point(mapping = aes(x = day, y = time), data = dis, alpha = 0.5, color = "red") +
+    #     scale_x_date(date_breaks='2 weeks', date_minor_breaks = "1 weeks") +
+    #     theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+    #     ggtitle(paste0(usr, " USB Connects/Disconnects"))
+    #   print(p)
+    # 
+    # }
+    
+    # web
+    p <- ggplot() +
+      geom_point(mapping = aes(x = day, y = time), data = web, alpha = 0.5, color = "blue") +
+      scale_x_date(date_breaks='2 weeks', date_minor_breaks = "1 weeks") +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+      ggtitle(paste0(usr, " Web Traffic"))
+    print(p)
+    
+  }
+}, movie.name = "web_no_facet.gif", interval = 1, nmax = 1000)
