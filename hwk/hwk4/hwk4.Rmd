@@ -190,7 +190,15 @@ And the following code gives the results for six clusters.
 
 ```{r, echo=TRUE}
 
-run.em(X = raw, N = 6, max.iter = 100)$mu
+x <- run.em(X = raw, N = 6, max.iter = 100)$mu
+# unpack into matrix
+em_means <- x[[1]]
+if(length(x) > 1){
+  for(i in 2:length(x)){
+    em_means <- rbind(em_means, x[[i]])
+  }
+}
+em_means
 kmeans(x = raw, centers = 6, iter.max = 100)$centers
 
 ```
