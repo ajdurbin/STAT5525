@@ -15,9 +15,34 @@ set.seed(12345)
 
 # TODO
 - problem 3 adjusted rand index
-- problem 1 limiting case and discussion
 - problem 4 discuss links and compare, do I need dendograms for the other methods? How to compare?
 - problem 5 variable selection and classification
+
+# Problem 1
+
+The underlying model of *k*-means is given by model (1) with $\Sigma_k=\sigma^2I$ for all $k$. That is, *k*-means does not take into account the variance within clusters when it is grouping observations. It also assumes that $\sigma^2$ is small. This procedure is implimented in the *EM* algorithm.
+
+To show that *k*-means and *EM* are equivalent under $\Sigma=\sigma^2I$ for all *k* as $\sigma^2 \rightarrow 0$, it suffices to show that their objective functions are equivalent during their respective optimization steps.
+
+The *k*-means minimizes the objective function \[O_{km}=\sum_{k=1}^K \sum_{i=1}^n \gamma_{i,k} ||x_i-\mu_k||^2,\] where $\gamma_{i,k}$ is the indicator function of $x_i$ belonging to cluster *k*.
+
+*EM* algorithm maximizes the objective function  
+
+\begin{align*}
+O_{EM}&=\sum_{k=1}^K \sum_{i=1}^n E[\gamma_{i,k}](log\pi_{i,k} + logN(x|\mu_k,\Sigma_k)) \\
+&=Nlog\frac{1}{K} - \frac{1}{\sigma^2}\sum_{k=1}^K \sum_{i=1}^nE[\gamma_{i,k}]||x_i-\mu_k||^2-N\frac{p}{2}log(2\pi\sigma^2)\\
+&=-\frac{1}{\sigma^2}\sum_{k=1}^K\sum_{i=1}^nE[\gamma_{i,k}]||x_i-\mu_k||^2+C,
+\end{align*}
+
+where we have collected constants. Multiplying by $\sigma^2$, we have
+
+\begin{align*}
+O_{EM} &\propto -\sum_{k=1}^K\sum_{i=1}^nE[\gamma_{i,k}]||x_i-\mu_k||^2+\sigma^2C\\
+&= -\sum_{k=1}^K\sum_{i=1}^nE[\gamma_{i,k}]||x_i-\mu_k||^2\\
+&= -O_{km}
+\end{align*}
+
+as $\sigma^2 \rightarrow 0$ and maximization. So that under constant variance-covariance matrices and small $\sigma^2$, minimization of within cluster spread in *k*-means is equivalent to the maximization step in *EM* algorithm up to proportionality.
 
 # Problem 2
 
