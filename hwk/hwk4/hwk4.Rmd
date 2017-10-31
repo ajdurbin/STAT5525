@@ -7,9 +7,11 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(mvtnorm)
+library(EMCluster)
+library(mclust)
 set.seed(12345)
 ```
 
@@ -24,7 +26,7 @@ The underlying model of *k*-means is given by model (1) with $\Sigma_k=\sigma^2I
 
 To show that *k*-means and *EM* are equivalent under $\Sigma=\sigma^2I$ for all *k* as $\sigma^2 \rightarrow 0$, it suffices to show that their objective functions are equivalent during their respective optimization steps.
 
-The *k*-means minimizes the objective function \[O_{km}=\sum_{k=1}^K \sum_{i=1}^n \gamma_{i,k} ||x_i-\mu_k||^2,\] where $\gamma_{i,k}$ is the indicator function of $x_i$ belonging to cluster *k*.
+*k*-means minimizes the objective function \[O_{km}=\sum_{k=1}^K \sum_{i=1}^n \gamma_{i,k} ||x_i-\mu_k||^2,\] where $\gamma_{i,k}$ is the indicator function of $x_i$ belonging to cluster *k*.
 
 *EM* algorithm maximizes the objective function  
 
@@ -42,7 +44,7 @@ O_{EM} &\propto -\sum_{k=1}^K\sum_{i=1}^nE[\gamma_{i,k}]||x_i-\mu_k||^2+\sigma^2
 &= -O_{km}
 \end{align*}
 
-as $\sigma^2 \rightarrow 0$ and maximization. So that under constant variance-covariance matrices and small $\sigma^2$, minimization of within cluster spread in *k*-means is equivalent to the maximization step in *EM* algorithm up to proportionality.
+as $\sigma^2 \rightarrow 0$ and maximization. So that under constant variance-covariance matrices and small $\sigma^2$, minimization of within cluster spread in *k*-means is equivalent to the maximization step in *EM* algorithm up to proportionality. Here $E[\gamma_{i,k}] = Pr(\gamma_{i,k}=1|x)=\hat{\pi}_{i,k}$, it's derivation is more involved than those in Problem 3.
 
 # Problem 2
 
@@ -120,7 +122,7 @@ log \mathcal{L}(\mu_j, \Sigma_j, \pi_j | \underline{x}) = \sum_{i=1}^n log \sum_
 
 Our implimentation of the EM algorithm is the following code. 
 
-```{r, echo = TRUE}
+```{r}
 
 
 ## expectation step
@@ -224,11 +226,33 @@ if(length(x) > 1){
   }
 }
 em_means
-kmeans(x = raw, centers = 6, iter.max = 100)$centers
+km <- kmeans(x = raw, centers = 6, iter.max = 100)
+km$centers
 
 ```
 
 We see that the results are drastically different.
+
+To better compare the results, we use `R` packages that assign the class labels.
+
+```{r}
+
+emobj <- simple.init(raw, nclass = 6)
+emobj <- shortemcluster(raw, emobj)
+ret <- emcluster(raw, emobj, assign.class = TRUE)
+ret$Mu
+
+```
+
+We compare the results of each clustering technique using Adjusted Rand Index.
+
+```{r}
+
+adjustedRandIndex(ret$class, km$cluster)
+
+```
+
+Even though the centroids are different between the two techniques, the methods do agree in the majority of their class labelling.
 
 ## Problem 4
 
