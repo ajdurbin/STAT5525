@@ -100,6 +100,22 @@ for(usr in unique_users){
     filter(user == usr, website != "none")
   usr_pcs <- unique(usr_web$pc)
   
+  # get rid of http statement
+  str_sub(usr_web$website, start = 1, end = 7) <- ""
+  
+  # get everything before last period, ie, everything before tld
+  usr_web$domain <- str_replace(string = usr_web$website, 
+                                pattern = "\\.[^\\.]*$",
+                                replacement = "") 
+  
+  # get words they using, returns list by website
+  # want to get the average per website
+  word_list <- str_split(string = usr_web$domain, pattern = "[-|.]")
+  word_vec <- unlist(word_list)
+  word_vec_unique <- unique(word_vec)
+  # word_tbl <- data.frame(table(word_vec))
+  # word_vec <- unique(word_vec)
+  
   # get time differences between web traffic
   # note that this is across days so this may not
   # be a good measure since we calculating difference between someone
@@ -141,10 +157,22 @@ for(usr in unique_users){
     primary_pc = unique(usr_web$primary_pc),
     total_pc_count = unique(usr_web$pc_count),
     web_pc_count = length(usr_pcs),
-    qck_web_runs = runs,
-    qck_web_lt_1_min = sum(na.omit(dif) < 1),
-    qck_web_lt_5_min = sum(na.omit(dif) < 5),
+    quick_web_runs = runs,
+    quick_web_lt_1_min = sum(na.omit(dif) < 1),
+    quick_web_lt_5_min = sum(na.omit(dif) < 5),
     role = unique(usr_web$role),
+    total_words = length(word_vec),
+    total_periods = sum(str_count(usr_web$domain, "\\.")),
+    total_dashes = sum(str_count(usr_web$domain, "\\-")),
+    # total_delimiters = total_periods + total_dashes,
+    total_unique_words = length(word_vec_unique),
+    average_words_per_site = mean(lengths(word_list)),
+    average_periods_per_site = sum(str_count(usr_web$domain, "\\."))
+                                / length(word_list),
+    average_dashes_per_site = sum(str_count(usr_web$domain, "\\-")) 
+                                / length(word_list),
+    # average_delimiter_per_site = mean(average_words_per_site +
+    #                                     average_periods_per_site),
     attrition = unique(usr_web$attrition),
     num_am = sum(endsWith(usr_web$website, ".am")),
     num_cn = sum(endsWith(usr_web$website, ".cn")),
