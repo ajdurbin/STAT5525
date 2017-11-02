@@ -272,11 +272,11 @@ for(usr in usb_users){
   
   
   # BEGIN bad connections
-  
+  bad_connects <- 0
   for(i in 1:nrow(con)){
     connect <- con$date[i]
     disconnect <- dis$date[i]
-    tmp <- usr_dat %>% 
+    tmp <- combo %>% 
       filter(between(date, connect, disconnect))
     # check if nothing in between and move on
     if( (nrow(tmp)-2) == 0){
