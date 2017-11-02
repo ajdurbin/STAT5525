@@ -231,6 +231,7 @@ for(i in 1:nrow(con)){
 
 
 rm(list = ls())
+options(stringsAsFactors = FALSE)
 library(tidyverse)
 library(lubridate)
 library(hms)
@@ -253,6 +254,11 @@ for(usr in usb_users){
   # filter out no usb activity and lonely connections
   combo <- big_data %>% 
     filter(usb != "none", usb_mis_dis != TRUE, user == usr) %>% 
+    arrange(date)
+  pc <- unique(combo$pc)
+  
+  combo <- big_data %>% 
+    filter(usb_mis_dis != TRUE, user == usr) %>% 
     arrange(date)
   
   primary_pc <- unique(combo$primary_pc)
@@ -300,7 +306,6 @@ for(usr in usb_users){
     
     bad_connects <- bad_connects + nrow(tmp)
     
-    
   }
   
   # END bad connections
@@ -323,7 +328,7 @@ for(usr in usb_users){
   md <- median(dif)
   role <- unique(combo$role)
   num <- length(dif)
-  pc <- unique(combo$pc)
+  # pc <- unique(combo$pc)
   # row
   row <- data.frame(
     user = usr,
@@ -352,3 +357,21 @@ for(usr in usb_users){
 }
 
 write_csv(usb_distribution, "usb_distribution.csv")
+
+ggplot(data = usb_distribution) +
+  geom_jitter(mapping = aes(
+    y = bad_connects, x = after_hour_connects, color = factor(attrition)
+  ))
+
+# do some logisitic lasso
+library(glmnet)
+library(caret)
+
+# remove unneccessary columns
+raw <- usb_distribution[, -(1:3)]
+raw <- raw[, -2]
+
+trc <- trainControl(method = "cv", number = 10)
+logfit <- train(factor(attrition) ~ ., data = raw, trControl = trc, method = "glm",
+                family = binomial())  
+paste0("Overall error rate: ", 1 - logfit$results[, 2])
