@@ -235,6 +235,7 @@ options(stringsAsFactors = FALSE)
 library(tidyverse)
 library(lubridate)
 library(hms)
+library(stringr)
 
 big_data <- read_csv("big_data.csv")
 
@@ -279,6 +280,7 @@ for(usr in usb_users){
   
   # BEGIN bad connections
   bad_connects <- 0
+  bad_pc <- ""
   for(i in 1:nrow(con)){
     connect <- con$date[i]
     disconnect <- dis$date[i]
@@ -304,7 +306,9 @@ for(usr in usb_users){
       next
     }
     
+    pcs <- paste(tmp$pc, collapse = " ")
     bad_connects <- bad_connects + nrow(tmp)
+    bad_pc <- str_c(bad_pc, pcs, sep = " ")
     
   }
   
@@ -338,6 +342,7 @@ for(usr in usb_users){
     role = role,
     attrition = unique(combo$attrition),
     bad_connects = bad_connects,
+    bad_connects_pc = bad_pc,
     after_hour_connects = cnt,
     total_usb_connects = num,
     quick_connects_lt_1_min = qck1,
@@ -375,3 +380,12 @@ trc <- trainControl(method = "cv", number = 10)
 logfit <- train(factor(attrition) ~ ., data = raw, trControl = trc, method = "glm",
                 family = binomial())  
 paste0("Overall error rate: ", 1 - logfit$results[, 2])
+
+
+
+# examine attrition users connections -------------------------------------
+
+
+usb_distribution <- read_csv("usb_distribution.csv")
+fired <- usb_distribution %>% 
+  filter(attrition == 1)
