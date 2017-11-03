@@ -12,7 +12,6 @@ library(tidyverse)
 library(mvtnorm)
 library(EMCluster)
 library(mclust)
-set.seed(12345)
 ```
 
 # TODO
@@ -48,33 +47,48 @@ as $\sigma^2 \rightarrow 0$ and maximization. So that under constant variance-co
 
 # Problem 2
 
-```{r}
+```{r, warning=FALSE}
 
 # load data
 raw <- read.table("ClusterSet1.txt")
 
-sto <- rep(0, 10)
-for(i in 1:10){
-  sto[i] <- kmeans(x = raw, centers = i, iter.max = 100)$tot.withinss
+
+best_km_fit <- list("1" <- NULL)
+for(i in 2:30){
+  fit <- kmeans(raw, centers = i)
+  for(j in 1:1000){
+    tmp <- kmeans(raw, centers = i)
+    if(tmp$tot.withinss < fit$tot.withinss){
+      fit <- tmp
+    }
+  }
+  tmp <- as.character(i)
+  best_km_fit[[tmp]] <- fit
+}
+
+# collect tot.withinss
+sto <- rep(0, 30)
+for(i in 2:length(best_km_fit)){
+  tmp <- best_km_fit[[i]]
+  sto[i] <- tmp$tot.withinss
 }
 
 ggplot() +
-  geom_point(mapping = aes(x = 1:10, y = sto)) +
+  geom_jitter(mapping = aes(x = 2:30, y = sto[2:length(sto)])) +
   ggtitle("Scree Plot For k-Means Clustering") +
   xlab("Number Of Clusters") +
   ylab("Total Within Clusters Sum Of Squares") +
-  xlim(0, 10) +
   ylim(min(sto), max(sto))
 
 ```
 
-The Scree plot shows that six clusters explain the majority of the variability in this data. There are marginal decreases in variability for $k>6$, .
+In order to make a "reliable" Scree plot, we iterated over 29 possible values of *k* and drew 1000 realizations of *k*-means for each *k*. Our "best" realizations were those with smallest total within cluster sum of squares. From the plot, we see marginal decreases in variability for $k>9$.
 
-The following code gives the centroids for *k*-Means for $k=6$.
+The following code gives the centroids for *k*-Means for $k=9$ of our "best" realization.
 
 ```{r, echo = TRUE}
 
-kmeans(x = raw, centers = 6, iter.max = 100)$centers
+best_km_fit[[9]]$centers
 
 ```
 
@@ -217,7 +231,7 @@ And the following code gives the results for six clusters.
 
 ```{r, echo=TRUE}
 
-x <- run.em(X = raw, N = 6, max.iter = 100)$mu
+x <- run.em(X = raw, N = 9, max.iter = 100)$mu
 # unpack into matrix
 em_means <- x[[1]]
 if(length(x) > 1){
@@ -226,8 +240,7 @@ if(length(x) > 1){
   }
 }
 em_means
-km <- kmeans(x = raw, centers = 6, iter.max = 100)
-km$centers
+best_km_fit[[9]]$centers
 
 ```
 
@@ -237,7 +250,7 @@ To better compare the results, we use `R` packages that assign the class labels.
 
 ```{r}
 
-emobj <- simple.init(raw, nclass = 6)
+emobj <- simple.init(raw, nclass = 9)
 emobj <- shortemcluster(raw, emobj)
 ret <- emcluster(raw, emobj, assign.class = TRUE)
 ret$Mu
@@ -248,7 +261,7 @@ We compare the results of each clustering technique using Adjusted Rand Index.
 
 ```{r}
 
-adjustedRandIndex(ret$class, km$cluster)
+adjustedRandIndex(ret$class, best_km_fit[[9]]$cluster)
 
 ```
 
