@@ -82,7 +82,7 @@ ggplot() +
 
 ```
 
-In order to make a "reliable" Scree plot, we iterated over 29 possible values of *k* and drew 1000 realizations of *k*-means for each *k*. Our "best" realizations were those with smallest total within cluster sum of squares. From the plot, we see marginal decreases in variability for $k>9$.
+In order to make a "reliable" Scree plot, we iterated over 29 possible values of *k* and drew 1000 realizations of *k*-means for each *k*. Our "best" realizations were those with smallest total within cluster sum of squares. This was necessary to because `R`'s *k*-means is extremely sensitive to the initial centroids and often performs poorly. From the plot, we see marginal decreases in variability for $k>9$.
 
 The following code gives the centroids for *k*-Means for $k=9$ of our "best" realization.
 
@@ -273,11 +273,31 @@ The following plots are dendograms by link function.
 
 ```{r}
 
-plot(hclust(dist(raw), method = "single"), main = "Single-Linkage Dendogram")
-plot(hclust(dist(raw), method = "complete"), main = "Complete-Linkage Dendogram")
-plot(hclust(dist(raw), method = "average"), main = "Average-Linkage Dendogram")
+hcs <- hclust(dist(raw), method = "single")
+hcc <- hclust(dist(raw), method = "complete")
+hca <- hclust(dist(raw), method = "average")
+plot(hcs, main = "Single-Linkage Dendogram")
+plot(hcc, main = "Complete-Linkage Dendogram")
+plot(hca, main = "Average-Linkage Dendogram")
 
 ```
+
+We use our prior knowledge of $k=9$ clusters to cut the trees and hopefully get a more clear signal.
+
+```{r}
+
+m1 <- cutree(hcs, k = 9)
+m2 <- cutree(hcc, k = 9)
+m3 <- cutree(hca, k = 9)
+hcsm <- hclust(dist(raw), method = "single", members = m1)
+hccm <- hclust(dist(raw), method = "complete", members = m2)
+hcam <- hclust(dist(raw), method = "average", members = m3)
+plot(hcsm, main = "Single-Linkage Dendogram")
+plot(hccm, main = "Complete-Linkage Dendogram")
+plot(hcam, main = "Average-Linkage Dendogram")
+
+```
+
 
 # Problem 5
 
