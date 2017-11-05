@@ -38,3 +38,8 @@ for(usr in unique_users){
 }
 
 write_csv(tenure_distribution, "tenure_distribution.csv")
+
+tenure_distribution <- read_csv("tenure_distribution.csv")
+fired <- tenure_distribution %>% 
+  filter(attrition == 1) %>% 
+  arrange(tenure_days)

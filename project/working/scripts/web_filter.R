@@ -2,66 +2,66 @@
 # find users with lots of traffic that is like
 # thiswebsite.com, this-website.net, this.website.pu, etc
 
-rm(list = ls())
-options(stringsAsFactors = FALSE)
-library(tidyverse)
-library(stringr)
-library(lubridate)
-library(hms)
+# rm(list = ls())
+# options(stringsAsFactors = FALSE)
+# library(tidyverse)
+# library(stringr)
+# library(lubridate)
+# library(hms)
 
-http <- read_csv("/home/alex/data_analytics/DataSets1_9182017/http_info.csv",
-                 col_names = FALSE)
-colnames(http) <- c("id", "date", "user", "pc", "website")
-http$date <- lubridate::mdy_hms(http$date)
-http$time <- hms::as.hms(http$date)
-http$day <- lubridate::as_date(http$date)
-http <- http %>% 
-  arrange(date)
+# http <- read_csv("/home/alex/data_analytics/DataSets1_9182017/http_info.csv",
+#                  col_names = FALSE)
+# colnames(http) <- c("id", "date", "user", "pc", "website")
+# http$date <- lubridate::mdy_hms(http$date)
+# http$time <- hms::as.hms(http$date)
+# http$day <- lubridate::as_date(http$date)
+# http <- http %>% 
+#   arrange(date)
 
 
 # some exploratory analysis -----------------------------------------------
 
 
 # pick random user
-usr <- sample(unique(http$user), 1)
-usr_web <- http %>% 
-  filter(user == usr)
-# usr <- "ACME/MVW0630"
-# candidate user, has several isntances of doubt.something.com, doubt-this.net
-
-# filter out the http://
-str_sub(usr_web$website, start = 1, end = 7) <- ""
-# get tld from each website
-# usr_web$tld <- sub(".*\\.", "", usr_web$website)
-# like this version better
-usr_web$tld <- str_extract(string = usr_web$website, pattern = "[^.]*$")
-# domain, everything before last period
-usr_web$domain <- str_replace(string = usr_web$website, 
-                              pattern = "\\.[^\\.]*$",
-                              replacement = "")
-# split domains at remaining delimiters, ".", "-"
-# returns lsit object
-# need to recombine into a vector
-word_list <- str_split(string = usr_web$domain, pattern = "[-|.]")
-word_vec <- unlist(word_list)
-word_vec <- unique(word_vec)
-word_df <- data.frame(word = word_vec, count = 0)
-for(i in 1:nrow(word_df)){
-  
-  wrd <- word_df[i, 1]
-  word_df[i, 2] <- sum(str_detect(string = usr_web$domain,
-                                  pattern = wrd))
-  
-}
-word_df <- word_df %>% 
-  arrange(desc(count))
-
-# there is an empty string in here somehow
-# emptry string is from people visiting ".com"
-# so my split techniques return the empty string
-# str_detect may not be best tool for the job
-# picking up alot of the partial matches that may not really be what i want
-# picks up a lot of, t, at, co, etc that come from fraction of observations
+# usr <- sample(unique(http$user), 1)
+# usr_web <- http %>% 
+#   filter(user == usr)
+# # usr <- "ACME/MVW0630"
+# # candidate user, has several isntances of doubt.something.com, doubt-this.net
+# 
+# # filter out the http://
+# str_sub(usr_web$website, start = 1, end = 7) <- ""
+# # get tld from each website
+# # usr_web$tld <- sub(".*\\.", "", usr_web$website)
+# # like this version better
+# usr_web$tld <- str_extract(string = usr_web$website, pattern = "[^.]*$")
+# # domain, everything before last period
+# usr_web$domain <- str_replace(string = usr_web$website, 
+#                               pattern = "\\.[^\\.]*$",
+#                               replacement = "")
+# # split domains at remaining delimiters, ".", "-"
+# # returns lsit object
+# # need to recombine into a vector
+# word_list <- str_split(string = usr_web$domain, pattern = "[-|.]")
+# word_vec <- unlist(word_list)
+# word_vec <- unique(word_vec)
+# word_df <- data.frame(word = word_vec, count = 0)
+# for(i in 1:nrow(word_df)){
+#   
+#   wrd <- word_df[i, 1]
+#   word_df[i, 2] <- sum(str_detect(string = usr_web$domain,
+#                                   pattern = wrd))
+#   
+# }
+# word_df <- word_df %>% 
+#   arrange(desc(count))
+# 
+# # there is an empty string in here somehow
+# # emptry string is from people visiting ".com"
+# # so my split techniques return the empty string
+# # str_detect may not be best tool for the job
+# # picking up alot of the partial matches that may not really be what i want
+# # picks up a lot of, t, at, co, etc that come from fraction of observations
 
 
 
@@ -75,17 +75,17 @@ word_df <- word_df %>%
 # most visit ssites
 # how many .com, etc
 
-rm(list = ls())
-options(stringsAsFactors = FALSE)
-library(tidyverse)
-library(stringr)
-library(lubridate)
-library(hms)
+# rm(list = ls())
+# options(stringsAsFactors = FALSE)
+# library(tidyverse)
+# library(stringr)
+# library(lubridate)
+# library(hms)
 
 # tld
 # am, cn, co, com, eu, fm, gov, li, me, net, org, ph, tv, uk, us
 
-big_data <- read_csv("big_data.csv")
+big_data <- read_csv("../data/big_data.csv")
 
 big_data <- big_data %>% 
   mutate(usb_mis_dis = ifelse(is.na(usb_mis_dis), "", usb_mis_dis)) %>% 
@@ -199,4 +199,7 @@ for(usr in unique_users){
 
 }
 
-write_csv(web_distribution, "web_distribution.csv")
+write_csv(web_distribution, "../data/web_distribution.csv")
+
+rm(unique_users, usr, usr_web, usr_pcs, word_list, word_vec,
+   word_vec_unique, time_interval, dif, small_dif, run_lengths, runs, row)

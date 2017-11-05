@@ -3,7 +3,7 @@ library(tidyverse)
 library(glmnet)
 library(caret)
 
-rm(list = ls())
+# rm(list = ls())
 
 
 # usb distribution models -------------------------------------------------
