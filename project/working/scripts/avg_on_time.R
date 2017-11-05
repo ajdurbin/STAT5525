@@ -73,7 +73,7 @@
 # library(lubridate)
 # library(hms)
 
-big_data <- read_csv("../data/big_data.csv", na = "")
+# big_data <- read_csv("../data/big_data.csv", na = "")
 big_data <- big_data %>% 
   mutate(usb_mis_dis = ifelse(is.na(usb_mis_dis), "", usb_mis_dis)) %>% 
   mutate(logoff_mis = ifelse(is.na(logoff_mis), "", logoff_mis))
@@ -144,7 +144,7 @@ for(usr in users){
   
 }
 
-write_csv(logon_distribution, "../data/logon_distribution.csv")
+# write_csv(logon_distribution, "../data/logon_distribution.csv")
 
 rm(users, usr, combo, usr_pcs, connects, i, usr_pc, pc_data, con, dis,
    time_interval, dif, all_times, row)

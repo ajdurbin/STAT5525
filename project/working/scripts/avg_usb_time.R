@@ -237,7 +237,7 @@
 # library(hms)
 # library(stringr)
 
-big_data <- read_csv("../data/big_data.csv")
+# big_data <- read_csv("../data/big_data.csv")
 
 big_data <- big_data %>% 
   mutate(usb_mis_dis = ifelse(is.na(usb_mis_dis), "", usb_mis_dis)) %>% 
@@ -361,7 +361,7 @@ for(usr in usb_users){
   
 }
 
-write_csv(usb_distribution, "../data/usb_distribution.csv")
+# write_csv(usb_distribution, "../data/usb_distribution.csv")
 
 rm(tmp, usb_users, usr, combo, pc, primary_pc, con, dis, bad_connects, 
    bad_pc, i, connect, disconnect, pcs, time_interval, dif, avg,

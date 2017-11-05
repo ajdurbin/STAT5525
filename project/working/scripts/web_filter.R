@@ -85,7 +85,7 @@
 # tld
 # am, cn, co, com, eu, fm, gov, li, me, net, org, ph, tv, uk, us
 
-big_data <- read_csv("../data/big_data.csv")
+# big_data <- read_csv("../data/big_data.csv")
 
 big_data <- big_data %>% 
   mutate(usb_mis_dis = ifelse(is.na(usb_mis_dis), "", usb_mis_dis)) %>% 
@@ -199,7 +199,7 @@ for(usr in unique_users){
 
 }
 
-write_csv(web_distribution, "../data/web_distribution.csv")
+# write_csv(web_distribution, "../data/web_distribution.csv")
 
 rm(unique_users, usr, usr_web, usr_pcs, word_list, word_vec,
    word_vec_unique, time_interval, dif, small_dif, run_lengths, runs, row)
