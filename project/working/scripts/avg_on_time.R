@@ -136,6 +136,9 @@ for(usr in users){
     min_on_min = min(all_times)
   )
   
+  # need to remove this else everyones traffic is added to it
+  rm(all_times)
+  
   if(!exists("logon_distribution")){
     logon_distribution <- row
   } else{

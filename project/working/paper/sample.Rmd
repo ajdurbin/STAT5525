@@ -11,11 +11,98 @@ abstract: "This paper discusses the methods and results of various statistical l
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-# Introduction And Exploratory Analyses
+# ACME Dataset
+## Introduction And Exploratory Analyses
 
 Our data is spread across several different files with both unique and non-unique features within and across files. Information readily available to us are timestamps, PC ID, and user ID of PC logon and logoffs, HTTP traffic, and USB connections and disconnections. Additionally, we are given monthly employee data files consisting of the current employee roster complete with employee name, employee user ID, role, and employee email address. From this information we are able to infer employee attrition based on the most recent employee roster. It is important to note that for the user HTTP traffic, we only track up to 15 unique URLs during business hours and up to five unique URL after business hours.
 
 We collated the logon, HTTP, and USB traffic into a new dataset to be more suitable for exploratory analyses and feature creation. The data was grouped into chronological order with other information such as user name, email, and attrition also included. Two initial obstacles were so-called "lonely" logons and USB connections. For a given user ID and PC, there were several instances of consecutive logons and USB connections. In the case of consecutive logons, this is the result of inactivity and the machine requiring user login after a certain period of inactivity. Unpaired logins occured between 11% to 14% of the time and varried slightly by user role. The IT administrators did this less frequently, about 1.5% of the time. For lonely USB connections, this is due to machines being shut down before the USB is disconnected. Unpaired USB connects were even less frequent, due to only 25% of the total users in the data having used USB devices. To resolve these issues, we calculated the average logon time and average USB connection time for each user and replaced the unpaired logons and connections with these average usage times as well as flagging the entry. 
 
-Our initial instincts lead us to analyze the logon, HTTP, and USB traffic separately and note inconsistencies amongst all users and within user roles for each data. From these inconsistencies, we could further scrutinize specific users for these abnormal behaviors. Examples of abnormal behaviors include PC logon and logoff in under a minute, USB connect and disconnect in under a minute, and abnormal web traffic, such as visiting `facebook.com` over 500 times in a single working day. For instantaneous logons and logoffs across several machines, this could be indicative of a malicious bot. Similarly in the case of instantaneous USB connections across, this could idenfity installation of malicious software. USB connections after hours could also possibly idenfity a data breach. Excessive web traffic could also be an artifact of bot traffic or malware. 
+Our initial instincts lead us to analyze the logon, HTTP, and USB traffic separately and note inconsistencies amongst all users and within user roles for each data. From these inconsistencies, we could further scrutinize specific users for these abnormal behaviors. Examples of abnormal behaviors include PC logon and logoff in under a minute, USB connect and disconnect in under a minute, and abnormal web traffic, such as visiting `facebook.com` over 500 times in a single working day. For instantaneous logons and logoffs across several machines, this could be indicative of a malicious bot. Similarly in the case of instantaneous USB connections and logging on to another machine, this could idenfity installation of malicious software. USB connections after hours could also possibly idenfity a data breach. Excessive web traffic could also be an artifact of bot traffic or malware. 
 
+## Web Traffic
+
+- insert three different web traffic graphics here, try to be different
+- visiting specific websites not enough to classify users
+- graphics suggested an increase in web traffic in 2011
+- long vertical bars suggest people visiting many websites in single day
+- traffic could be indicative of a bot or something
+- tried to look closer at actual websites visited for some more information
+- interesting pattern emerged
+- keyword.website.com keyword-web.net  keywordthing.com
+- thought this would be the really fast traffic for some users
+- but these permutations of each keyword were not unique to each user
+- that is two different users could be using this same keyword
+- so keyword alone not enough to describe users
+- web traffic fictitous, so we broke down the web traffic into serveral var
+- keep track of fast traffic, like going to multiple webistes under 1 min
+- keep track of how many pc they do websites on
+- keep track of fast web traffic total runs
+- keep track of total words, periods, dashes, unique words, averages
+- keep track of number of different tld each user used
+- why is this important? 
+- the strings alone were not enough to quantify or differentiate the user
+- we the web runs were thought necessary to account for bot traffic/spam
+- different tld necessary for malicious websites, pirating, torrenting
+- good overall performance in using these variables to predict attrition
+- low error rates of between 4-9% in a given class of employee attrition
+- could be good indicator of spam traffic if user is using lots of diffeent
+- machine with many successive website runs
+- characterizing their website traffic by word/length/strings to better
+  identify differences
+
+## usb traffic
+
+- only 228 unique usb users in entire dataset
+- of which such % were attrition
+- no user used a usb that was not their "primary" machine
+- primary derived from total number of logons 
+- insert graphic of usb traffic here
+- some user use usb once in mornign and unplug at night
+- other more sporadic traffic
+- initially thought malware installation could be real possibility
+- but each user only use usb on their primary machine
+- no real trends in usb traffic by user role either
+- similar to above, we look at quick connect traffic
+- also look at "bad" connections, those after hours, this is sign of remove
+- look at length of usb connections
+- think those users logging in after hours and only connecting for short time
+  period are up to no good
+- many users give the tendancy to connect usb and then logon to otehr machine
+- we wanted this to be another sign of a data breach, especially after hours
+- also focused on total number of connections, some users are frequent usb
+  users so we may expect them to connect outside of the office but others who
+  only use usb sporadically in after hours need to be flagged
+
+## logon traffic
+
+- figure of logon traffic
+- tried to categorize user logon traffic
+- kept track of users logging on to multiple machines
+- it people hardest to characterize, since they has no attrition and log on to
+  most machiens
+- kept track of quick connections again, this could be sign of some sort of
+  malicious user traffic if they logon to multiple machines very quickly and
+  then logoff
+- keep track of all the summary statistics of each users logon lengths, mean,
+  median, etc
+- many users across different roles logon the same number of times, and have
+  the same number of quick connections, both less than 1 minute and less than 5
+  minutes. but they're differentiated by their number of pc they logon to. 
+- really there are few distinct groups of total connections and quick
+  connections
+- this was least interesting to look at
+
+## Model fits and performance
+
+- logistic lasso performed on attrition for each of the separate data sets
+- about 50+ different datasets generated for each set of attrition dates
+- we subsetted the data by each user attrition date and only took users who
+  were still working there at that time
+- this way we didnt bias our results to user attrition with little traffic
+  because they were fired like six months ago
+- models perform pretty well using 10 fold cross validation
+- how to display results?
+- maybe just give short brief table of how many different data sets were
+  generated and then add the summary statistics of the different error rates
+  for each of usb, web, logon
