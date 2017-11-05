@@ -15,7 +15,8 @@ all_data <- read_csv("../data/big_data.csv")
 
 start_date <- unique(fired$start_date)
 end_dates <- unique(fired$end_date)
-end_dates <- end_dates[1:3]
+# test
+# end_dates <- end_dates[1:3]
 
 for(end_date in end_dates){
   
@@ -35,7 +36,8 @@ for(end_date in end_dates){
 
   # source output
   rmarkdown::render(input = "template.Rmd",
-                    output_file = paste0("../outputs/", end_date,".html"))
+                    output_file = paste0("../outputs/", end_date,
+                    "/fit.html"))
 
   # write outputs
   write_csv(logon_distribution,

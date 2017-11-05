@@ -256,6 +256,11 @@ for(usr in usb_users){
   combo <- big_data %>% 
     filter(usb != "none", usb_mis_dis != TRUE, user == usr) %>% 
     arrange(date)
+  
+  if(nrow(combo) == 0){
+    next
+  }
+  
   pc <- unique(combo$pc)
   
   combo <- big_data %>% 
@@ -282,12 +287,12 @@ for(usr in usb_users){
   bad_connects <- 0
   bad_pc <- ""
   for(i in 1:nrow(con)){
-    connect <- con$date[i]
-    disconnect <- dis$date[i]
+    connect <- as_date(con$date[i])
+    disconnect <- as_date(dis$date[i])
     tmp <- combo %>% 
       filter(between(date, connect, disconnect))
     # check if nothing in between and move on
-    if( (nrow(tmp)-2) == 0){
+    if( (nrow(tmp)-2) == 0 | nrow(tmp) == 0){
       next
     }
     
@@ -316,7 +321,7 @@ for(usr in usb_users){
   
   # count how many after hours connections there are, say between 9pm,5am
   con$hour <- as.numeric(hour(con$time))
-  cnt <- sum(con$hour > 21 | con$hour < 5)
+  # cnt <- sum(con$hour > 21 | con$hour < 5)
   
   # using interval, duration, period from lubridate
   time_interval <- con$date %--% dis$date
@@ -324,12 +329,12 @@ for(usr in usb_users){
   dif <- as.numeric(dif)
   dif <- dif/60
   # return objects
-  avg <- mean(dif)
-  qck1 <- sum(dif < 1)
-  qck5 <- sum(dif < 5)
-  mx <- max(dif)
-  mn <- min(dif)
-  md <- median(dif)
+  # avg <- mean(dif)
+  # qck1 <- sum(dif < 1)
+  # qck5 <- sum(dif < 5)
+  # mx <- max(dif)
+  # mn <- min(dif)
+  # md <- median(dif)
   role <- unique(combo$role)
   num <- length(dif)
   # pc <- unique(combo$pc)
@@ -337,20 +342,20 @@ for(usr in usb_users){
   row <- data.frame(
     user = usr,
     primary_pc = primary_pc,
-    usb_pc = pc,
+    # usb_pc = pc,
     pc_count = unique(combo$pc_count),
     role = role,
     attrition = unique(combo$attrition),
     bad_connects = bad_connects,
-    bad_connects_pc = bad_pc,
-    after_hour_connects = cnt,
-    total_usb_connects = num,
-    quick_connects_lt_1_min = qck1,
-    quick_connects_lt_5_min = qck5,
-    average_usb_min = avg,
-    median_usb_min = md,
-    max_usb_min = mx,
-    min_usb_min = mn
+    # bad_connects_pc = bad_pc,
+    after_hour_connects = sum(con$hour > 21 | con$hour < 5),
+    total_usb_connects = length(dif),
+    quick_connects_lt_1_min = sum(dif < 1),
+    quick_connects_lt_5_min = sum(dif < 5),
+    average_usb_min = mean(dif),
+    median_usb_min = median(dif),
+    max_usb_min = max(dif),
+    min_usb_min = min(dif)
   )
   
   if(!exists("usb_distribution")){
@@ -363,9 +368,13 @@ for(usr in usb_users){
 
 # write_csv(usb_distribution, "../data/usb_distribution.csv")
 
-rm(tmp, usb_users, usr, combo, pc, primary_pc, con, dis, bad_connects, 
+rm(tmp, usb_users, usr, combo, pc, primary_pc, con, dis, bad_connects,
    bad_pc, i, connect, disconnect, pcs, time_interval, dif, avg,
    qck1, qck5, mx, mn, md, role, num, row, cnt)
+
+# rm(tmp, usb_users, usr, combo, pc, primary_pc, con, dis, bad_connects, 
+#    i, connect, disconnect, pcs, time_interval, dif,
+#    role, num, row, cnt)
 
 # ggplot(data = usb_distribution) +
 #   geom_jitter(mapping = aes(

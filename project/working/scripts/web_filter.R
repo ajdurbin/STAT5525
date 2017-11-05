@@ -98,6 +98,10 @@ for(usr in unique_users){
   
   usr_web <- big_data %>% 
     filter(user == usr, website != "none")
+  if(nrow(usr_web) ==  0){
+    next
+  }
+  
   usr_pcs <- unique(usr_web$pc)
   
   # get rid of http statement
