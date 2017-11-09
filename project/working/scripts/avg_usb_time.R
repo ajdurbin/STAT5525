@@ -292,7 +292,11 @@ for(usr in usb_users){
     tmp <- combo %>% 
       filter(between(date, connect, disconnect))
     # check if nothing in between and move on
-    if( (nrow(tmp)-2) == 0 | nrow(tmp) == 0){
+    if( (nrow(tmp)-2) == 0){
+      next
+    }
+    
+    if(nrow(tmp) == 0){
       next
     }
     

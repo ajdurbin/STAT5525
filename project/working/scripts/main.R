@@ -31,7 +31,8 @@ for(end_date in end_dates){
   
   # source files
   source("avg_on_time.R")
-  source("avg_usb_time.R")
+  # source("avg_usb_time.R")
+  source("revised_avg_usb_time.R")
   source("web_filter.R")
 
   # source output
