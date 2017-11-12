@@ -276,28 +276,16 @@ The following plots are dendograms by link function.
 hcs <- hclust(dist(raw), method = "single")
 hcc <- hclust(dist(raw), method = "complete")
 hca <- hclust(dist(raw), method = "average")
-plot(hcs, main = "Single-Linkage Dendogram")
-plot(hcc, main = "Complete-Linkage Dendogram")
-plot(hca, main = "Average-Linkage Dendogram")
+plot(hcs, main = "single linkage")
+rect.hclust(hcs, k = 9, border = "red")
+plot(hcc, main = "complete linkage")
+rect.hclust(hcc, k = 9, border = "red")
+plot(hca, main = "average linkage")
+rect.hclust(hca, k = 9, border = "red")
 
 ```
 
-We use our prior knowledge of $k=9$ clusters to cut the trees and hopefully get a more clear signal.
-
-```{r}
-
-m1 <- cutree(hcs, k = 9)
-m2 <- cutree(hcc, k = 9)
-m3 <- cutree(hca, k = 9)
-hcsm <- hclust(dist(raw), method = "single", members = m1)
-hccm <- hclust(dist(raw), method = "complete", members = m2)
-hcam <- hclust(dist(raw), method = "average", members = m3)
-plot(hcsm, main = "Single-Linkage Dendogram")
-plot(hccm, main = "Complete-Linkage Dendogram")
-plot(hcam, main = "Average-Linkage Dendogram")
-
-```
-
+We choose *complete linkage* because it provides the most clear signal and conclude there are 9 clusters in this dataset, similar to our *k*-means Scree plot.
 
 # Problem 5
 
