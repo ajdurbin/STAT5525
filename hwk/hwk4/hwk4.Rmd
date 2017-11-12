@@ -15,7 +15,6 @@ library(mclust)
 ```
 
 # TODO
-- problem 3 adjusted rand index
 - problem 4 discuss links and compare, do I need dendograms for the other methods? How to compare?
 - problem 5 variable selection and classification
 
