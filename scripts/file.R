@@ -1,12 +1,16 @@
 options(stringsAsFactors = FALSE)
 rm(list = ls())
 ._ <- c("dplyr", "readr", "plyr", "lubridate", "hms", "glmnet", "caret",
-        "randomForest", "rpart")
+        "randomForest", "rpart", "stringr", "tm", "wordcloud",
+        "animation", "ggplot2", "SnowballC", "topicmodels")
 lapply(._, library, character.only = TRUE)
 
 file <- read_csv("../raw/file_info.csv")
 usb <- read_csv("../raw/device_info.csv")
 usb_users <- unique(file$user) 
+usr <- sample(usb_users, 1)
+usr_data <- file %>%
+    filter(user == usr)
 # cur <- read_csv("../raw/LDAP/2011-05.csv")
 # 1 - sum((unique(usb$user) %in% cur$user_id)) / length(unique(usb$user)) 
 # attrition rate of 33%, much better for classification
@@ -65,8 +69,8 @@ usb_users <- unique(file$user)
 
 # wordcloud analysis ------------------------------------------------------
 
-._ <- c("tm", "wordcloud", "animation")
-lapply(._, library, character.only = TRUE)
+# ._ <- c("tm", "wordcloud", "animation")
+# lapply(._, library, character.only = TRUE)
 # test_usr <- sample(usb_users, 1)
 # usr_data <- file %>%
 #     filter(user == test_usr)
@@ -107,3 +111,83 @@ saveGIF({
                   colors = brewer.pal(6, "Dark2"), max.words = 30)
     }
 }, movie.name = "usb_wc.gif", interval = 1.5, max = 10000)
+
+
+# sentiment analysis on usb contents --------------------------------------
+
+positives <- read_table("../sentiment/positive-words.txt", skip = 35,
+                      col_names = FALSE)
+positives <- as.vector(unlist(positives))
+negatives <- read_table("../sentiment/negative-words.txt", skip = 35,
+                       col_names = FALSE)
+negatives <- as.vector(unlist(negatives))
+
+my_format <- function(content){
+    content = gsub("[[:punct:]]", "", content) # no punctuation
+    content = gsub("[[:cntrl:]]", "", content) # no control
+    content = gsub("[[:digit:]]", "", content) # no digits
+    str_to_lower(content) # lowercase
+    return(content)
+}
+
+my_score <- function(cntnt, pos_wrds, neg_wrds){
+    wrds = str_split(cntnt, "\\s+")
+    wrds = unlist(wrds)
+    pos_score = sum(wrds %in% pos_wrds)
+    neg_score = sum(wrds %in% neg_wrds)
+    score = pos_score - neg_score
+    return(score)
+}
+
+my_unpack <- function(my_list){
+    pckg <- rep(NA, length(my_list))
+    for(i in 1:length(my_list)){
+        tmp <- my_list[[i]]
+        pckg[i] <- tmp 
+    }
+    return(pckg)
+    
+}
+
+test <- lapply(usr_data$content, my_format)
+test <- my_unpack(test)
+test <- lapply(test, function(g) my_score(g, positives, negatives))
+test <- my_unpack(test)
+total_score <- sum(test)
+
+ggplot() + 
+    geom_histogram(mapping = aes(x = test), binwidth = 1) +
+    xlab("Sentiment Score") +
+    ggtitle(paste0(usr, " USB Sentiment\nTotal Score ", total_score))
+# maybe save this as gif too
+
+
+# lda analysis ------------------------------------------------------------
+
+docs <- Corpus(VectorSource(usr_data$content)) %>% 
+    tm_map(content_transformer(tolower)) %>% 
+    tm_map(removePunctuation) %>% 
+    tm_map(removeNumbers) %>% 
+    tm_map(removeWords, stopwords("english")) %>% 
+    tm_map(stripWhitespace) %>% 
+    tm_map(stemDocument)
+dtm <- DocumentTermMatrix(docs)
+rownames(dtm) <- usr_data$filename
+freq <- colSums(as.matrix(dtm))
+ord <- order(freq, decreasing = TRUE)
+freq[ord]
+
+out <- LDA(dtm, k = 4, method = "Gibbs",
+           control = list(nstart = 4,
+                          seed = list(2003, 5, 63, 765),
+                          best = TRUE,
+                          burnin = 4000,
+                          iter = 2000,
+                          thin = 500))
+topics <- as.matrix(topics(out))
+terms <- as.matrix(terms(out, 6))
+probs <- as.data.frame(out@gamma)
+rel12 <- lapply(1:nrow(dtm), function(x)
+    sort(probs[x, ])[4] / sort(probs[x, ])[4-1])
+rel23 <- lapply(1:nrow(dtm), function(x)
+    sort(probs[x, ])[4-1] / sort(probs[x, ])[4-2])
