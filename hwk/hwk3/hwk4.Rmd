@@ -8,14 +8,12 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-library(tidyverse)
-library(mvtnorm)
-library(EMCluster)
-library(mclust)
+._ <- c("tidyverse", "mvtnorm", "EMCluster", "mclust", "subspace",
+        "orclus", "HDclassif")
+lapply(._, library, character.only = TRUE)
 ```
 
 # TODO
-- problem 4 discuss links and compare, do I need dendograms for the other methods? How to compare?
 - problem 5 variable selection and classification
 
 # Problem 1
@@ -48,9 +46,7 @@ as $\sigma^2 \rightarrow 0$ and maximization. So that under constant variance-co
 
 ```{r, warning=FALSE}
 
-# load data
 raw <- read.table("ClusterSet1.txt")
-
 
 best_km_fit <- list("1" <- NULL)
 for(i in 2:30){
@@ -65,7 +61,6 @@ for(i in 2:30){
   best_km_fit[[tmp]] <- fit
 }
 
-# collect tot.withinss
 sto <- rep(0, 30)
 for(i in 2:length(best_km_fit)){
   tmp <- best_km_fit[[i]]
@@ -137,9 +132,6 @@ Our implimentation of the EM algorithm is the following code.
 
 ```{r}
 
-
-## expectation step
-## find probability of each cluster for each point
 E.step <- function(X, phi, N) {
   
   h <-
@@ -147,13 +139,10 @@ E.step <- function(X, phi, N) {
                       lapply(1:N, function(i)
                         dmvnorm(X, mu[[i]], sig[[i]]))))
   
-  return(h/rowSums(h))  #Normalize
+  return(h/rowSums(h))
   
 }
 
-## maximization step
-## given the probability of each cluster for each point
-## find the values of mu, sigma, and alpha that maximize likelihood
 M.step <- function(X, h, N) {
   
   covs <- lapply(1:N, function(i) cov.wt(X, h[,i]))
@@ -165,10 +154,6 @@ M.step <- function(X, h, N) {
   
 }
 
-## log.likelihood
-## given points and parameters, how well does model fit
-## also gives terminating condition 
-## stop if don't improve much
 log.like <- function(X, phi, N) {
   
   probs <- 
@@ -180,46 +165,26 @@ log.like <- function(X, phi, N) {
   
 }
 
-## main program
-## X = dataset
-## N = number of clusters
-## Terminate if log.like(t-1) - log.like(t) is below a threshold
 run.em <- function(X, N, max.iter = 30) {
   
-  # get initial estimates of means and covariances for each cluster
-  # randomly sample 30 points and build estimates
-  # covs is list of lists
-  # first list is list of first cluster information
-  # etc
   covs <- replicate(N, list(cov.wt(X[sample(nrow(X), 30),])))
-  
-  # list of cluster means
   mu <- lapply(covs, "[[", "center")
-  
-  # list of cluster variances
   sig <- lapply(covs, "[[", "cov")
-  
-  # weights
   alpha <- rep(1 / N, N)
-  
-  # list of lists of parameters for each cluster
   phi <<- list(mu = mu, sig = sig, alpha = alpha)
   
-  # repeat until convergence or maximum iterations reached
   for(i in 1:max.iter) {
     
     oldphi <- phi
-    # e step
     h <<- E.step(X, phi, N)
-    # m step
     phi <<- M.step(X, h, N)
     
-    # check for convergence with log-likelihood
-    if((log.like(X, phi, N) - log.like(X, oldphi, N)) < 0.01)
-      break
+    if((log.like(X, phi, N) - log.like(X, oldphi, N)) < 0.01){
+        break
+    }
+    
   }
   
-  # return cluster information
   return(phi)
   
 }
@@ -231,7 +196,6 @@ And the following code gives the results for six clusters.
 ```{r, echo=TRUE}
 
 x <- run.em(X = raw, N = 9, max.iter = 100)$mu
-# unpack into matrix
 em_means <- x[[1]]
 if(length(x) > 1){
   for(i in 2:length(x)){
@@ -277,19 +241,42 @@ hcc <- hclust(dist(raw), method = "complete")
 hca <- hclust(dist(raw), method = "average")
 plot(hcs, main = "single linkage")
 rect.hclust(hcs, k = 9, border = "red")
+cor(cophenetic(hcs), dist(raw))
 plot(hcc, main = "complete linkage")
 rect.hclust(hcc, k = 9, border = "red")
+cor(cophenetic(hcc), dist(raw))
 plot(hca, main = "average linkage")
 rect.hclust(hca, k = 9, border = "red")
+cor(cophenetic(hca), dist(raw))
 
 ```
 
-We choose *complete linkage* because it provides the most clear signal and conclude there are 9 clusters in this dataset, similar to our *k*-means Scree plot.
-
-# Problem 5
+We choose *average linkage* because it provides the most clear signal and conclude that there are 9 clusters in this dataset, similar to our *k*-means Scree plot. Additionally, it provides the largest correlation between the Cophenetic distance measure and link function distance measure among all three link functions attempted.
+ # Problem 5
 
 ```{r}
 
 raw <- read.table("ClusterSet2.txt")
+
+```
+
+With 50 dimensions, the Curse of Dimensionality is an issue and *k*-means will not be able to capture the overall variability in the observations. Similar to Problem 2, we simulate *k*-means 1000 times for $ 2 \le k \le 100$ and store the smallest total within sum of squares for each *k*. Our Scree plot shows a sharp bend near 12-15 clusters. Thus, we need to consider alternative methods for finding the total number of clusters in this data.
+
+We can also consider subspace clustering. Here, we partition the space such that for a given subset of the dimensions, there is a cluster of observations. However, there is still an issue with this technique in high dimensions where observations are "far" away from eachother. We consider two different algorithms here for computing the number of clusters using subspace clustering. 
+
+```{r}
+
+FIRES(raw)
+SubClu(raw)
+
+```
+
+
+Similar to subspace clustering, we can also use projection clustering. Here, the clusters can be in different subspaces. Again, we consider two different algorithms for projected clustering.
+
+```{r}
+
+P3C(raw)
+ProClus(raw)
 
 ```
