@@ -252,7 +252,8 @@ cor(cophenetic(hca), dist(raw))
 ```
 
 We choose *average linkage* because it provides the most clear signal and conclude that there are 9 clusters in this dataset, similar to our *k*-means Scree plot. Additionally, it provides the largest correlation between the Cophenetic distance measure and link function distance measure among all three link functions attempted.
- # Problem 5
+
+# Problem 5
 
 ```{r}
 
@@ -280,3 +281,66 @@ P3C(raw)
 ProClus(raw)
 
 ```
+
+So we see that `P3C` and `FIRES` algorithms both agree that there are 44 clusters using either subspace or projected clustering. Both `ProClus` and `Subclus` conclude there are 4 clusters. This is because each of these algorithms is extremely similar to *k*-means in that we must specify a number of clusters ahead of time, but also the average number of dimensions that a cluster is contained in. It is very difficult to approximate these values in high dimensional space, so we find them less useful than `P3C` and `FIRES` algorithms.
+
+We also fit the `CLIQUE` algorithm for subspace clustering.
+
+```{r}
+
+CLIQUE(raw, xi = 30, tau = 0.2)
+
+```
+
+Here, the tuning parameter $x_i$ is the number of intervals each dimensions is divided into. From here, we keep the intervals such that the density is greater than $\tau$. We then intersect these intervals in multiple dimensions to create clusters. Adjacent clusters become a joint cluster after all intersections are performed. Here we conclude that there are 29 clusters. However, we need a metric for tuning $x_i$. 
+
+Because we have highly dimensional data, we can also consider dimensionality reduction before clustering. Here we use Principal Components before and select the *n* principal components that explain the majority fo the variation using a Scree plot. From here, we then redo our hierarchical clustering and *k*-means simulation to get the number of clusters in our data. 
+
+```{r}
+
+pca <- princomp(raw)
+vars <- pca$sdev^2
+vars <- vars / sum(vars)
+ggplot() + 
+    geom_jitter(mapping = aes(x = 1:length(vars), y = vars)) +
+    xlab("Principal Component") +
+    ylab("Variation Explained") +
+    ggtitle("Proportion of Total Variability\nExplained By Principal Components")
+
+```
+
+We see that the majority of the total variability is best explained by the first 11 principal components. We then select those components and redo our *k*-means simulation from Problem 2 to get the total number of clusters in this reduced dimensional data. 
+
+```{r, warning=FALSE}
+
+scores <- pca$scores[, 1:11]
+
+best_km_fit <- list("1" <- NULL)
+for(i in 2:30){
+  fit <- kmeans(scores, centers = i)
+  for(j in 1:1000){
+    tmp <- kmeans(scores, centers = i)
+    if(tmp$tot.withinss < fit$tot.withinss){
+      fit <- tmp
+    }
+  }
+  tmp <- as.character(i)
+  best_km_fit[[tmp]] <- fit
+}
+
+sto <- rep(0, 30)
+for(i in 2:30){
+  tmp <- best_km_fit[[i]]
+  sto[i] <- tmp$tot.withinss
+}
+
+ggplot() +
+  geom_jitter(mapping = aes(x = 2:30, y = sto[2:length(sto)])) +
+  ggtitle("Scree Plot For k-Means Clustering\nOn First 1O Principal Components") +
+  xlab("Number Of Clusters") +
+  ylab("Total Within Clusters Sum Of Squares") +
+  ylim(min(sto), max(sto))
+
+```
+
+We thus conclude that there are 12 clusters here. 
