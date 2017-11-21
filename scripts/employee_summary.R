@@ -1,24 +1,29 @@
 rm(list = ls())
 ._ <- c("dplyr", "readr", "plyr", "chron", "hms", "glmnet", "caret",
         "randomForest", "rpart", "stringr", "tm", "wordcloud",
-        "animation", "ggplot2", "SnowballC", "topicmodels", "parallel")
+        "animation", "ggplot2", "SnowballC", "topicmodels", "parallel",
+        "tidytext")
 lapply(._, library, character.only = TRUE)
+
+
+# load data ---------------------------------------------------------------
+
 
 file <- read_csv("../raw/file_info.csv")
 device <- read_csv("../raw/device_info.csv")
 psych <- read_csv("../raw/psychometric_info.csv")
-cur <- read_csv("../raw/LDAP/2011-05.csv")
-first <- read_csv("../raw/LDAP/2009-12.csv")
+latest <- read_csv("../raw/LDAP/2011-05.csv")
+original <- read_csv("../raw/LDAP/2009-12.csv")
 logon <- read_csv("../raw/logon_info.csv")
 
 # supervisor dictionary
-sup <- unique(cur$supervisor)
-sup <- cur %>%
+sup <- unique(latest$supervisor)
+sup <- latest %>%
     filter(employee_name %in% sup) %>% 
     select(employee_name, user_id, email)
 
-## test local before remote run
-# email <- read_csv("../raw/email_info.csv")
+# test local before remote run
+email <- read_csv("../data/email_small.csv")
 # f <- function(x, pos){
 #     return(x[, c(2, 3, 4, 5)])
 # }
@@ -26,18 +31,65 @@ sup <- cur %>%
 #                          chunk_size = 100000)
 
 users <- unique(logon$user)
-# president has no supervisor
-# users <- users[users != "MSS001"]
 
-# aggregate summary information
-# combo <- function(usr, cur = cur, file = file, first = first, device = device, 
+
+# function declarations ---------------------------------------------------
+
+
+# unpack list object into dataframe for email
+email_unpack <- function(my_list) {
+    
+    name <- my_list[[1]][1]
+    domain <- my_list[[1]][2]
+    for (i in 2:length(my_list)) {
+        tmp_name = my_list[[i]][1]
+        tmp_domain = my_list[[i]][2]
+        name <- c(name, tmp_name)
+        domain <- c(domain, tmp_domain)
+    }
+    pckg <- data.frame(name = name, domain = domain)
+    
+}
+
+# process user email information
+email_process <- function(usr = usr, usr_email = usr_email, original = original) {
+    
+    # get the user's work email address
+    usr_email_address <- original %>% 
+        filter(user_id == usr) %>% 
+        select(email) %>% 
+        as.character()
+    # then fitler it out from the other work emails
+    other_employee <- original %>% 
+        filter(user_id != usr) %>% 
+        select(email)
+    # split the username and domains
+    employee_email_dictionary <- str_split(other_employee$email, "@")
+    employee_email_dictionary <- email_unpack(employee_email_dictionary)
+    # split username and domains
+    usr_from_dictionary <- str_split(usr_email$from, "@")
+    usr_from_dictionary <- email_unpack(usr_from_dictionary)
+    # not sure if want unique ones above yet, need to be able to count these
+    usr_from_dictionary <- unique(usr_from_dictionary)
+    # find if they sending emails under someone else's username
+    fraud_work_emails <- sum(usr_from_dictionary$name %in% employee_email_dictionary$name)
+    num_unique_from <- nrow(usr_from_dictionary)
+    num_attachments <- sum(usr_email$attachments)
+    pckg <- list(fraud_work_emails = fraud_work_emails,
+                 num_unique_from = num_unique_from,
+                 num_attachments = num_attachments)
+    return(pckg)
+    
+}
+
+# aggregate user data
+# combo <- function(usr, latest = latest, file = file, original = original, device = device, 
 #                   psych = psych, logon = logon, email = email, http = http,
 #                   sup = sup) {
-combo <- function(usr, cur = cur, first = first, file = file, device = device, psych = psych,
-                  logon = logon, sup = sup) {
+combo <- function(usr, latest = latest, original = original, file = file, device = device, psych = psych,
+                  logon = logon, sup = sup, email = email) {
     
     # file downloads
-        
     usr_file <- file %>%
         filter(user == usr) 
     if (nrow(usr_file) != 0) {
@@ -48,7 +100,6 @@ combo <- function(usr, cur = cur, first = first, file = file, device = device, p
         select(-date) %>% 
         mutate(extension = stringr::str_extract(filename, "[^.]*$")) 
     }
-        
     
     # usb connects
     usr_device <- device %>%
@@ -72,7 +123,7 @@ combo <- function(usr, cur = cur, first = first, file = file, device = device, p
         filter(hour > 0 & hour < 5)
 
     # supervisor information
-    supervisor <- first %>%
+    supervisor <- original %>%
         filter(user_id == usr) %>%
         select(supervisor) %>%
         as.character()
@@ -90,16 +141,17 @@ combo <- function(usr, cur = cur, first = first, file = file, device = device, p
         filter(user_id == usr)
 
     # beginning employees
-    usr_first <- first %>%
+    usr_original <- original %>%
         filter(user_id == usr)
 
-    # # email
-    # usr_email <- email %>%
-    #     filter(user == usr) %>%
-    #     mutate(date = strptime(date, "%m/%d/%Y %H:%M:%S"), time = hms::as.hms(date),
-    #            day = as.Date(date), hour = chron::hours(date)) %>% 
-    #     select(-date)
-    # 
+    # email
+    usr_email <- email %>%
+        filter(user == usr) %>%
+        mutate(date = strptime(date, "%m/%d/%Y %H:%M:%S"), time = hms::as.hms(date),
+               day = as.Date(date), hour = chron::hours(date)) %>%
+        select(-date)
+    tmp <- email_process(usr = usr, usr_email = usr_email, original = original)
+
     # # web
     # usr_http <- http %>%
     #     filter(user == usr) %>%
@@ -107,16 +159,16 @@ combo <- function(usr, cur = cur, first = first, file = file, device = device, p
     #            day = as.Date(date), hour = chron::hours(date)) %>% 
     #     select(-date)
     
-    row <- data.frame(employee_name = usr_first$employee_name,
+    row <- data.frame(employee_name = usr_original$employee_name,
                       employee_id = usr,
-                      employee_email = usr_first$email,
-                      employee_role = usr_first$role,
+                      employee_email = usr_original$email,
+                      employee_role = usr_original$role,
                       # supervisor information
                       supervisor_name = supervisor_info$employee_name,
                       supervisor_id = supervisor_info$user_id,
                       supervisor_email = supervisor_info$email,
                       # attrition
-                      attrition = usr %in% cur$user_id,
+                      attrition = usr %in% latest$user_id,
                       # file download information
                       total_downloads = nrow(usr_file),
                       total_after_hour_downloads =
@@ -148,42 +200,49 @@ combo <- function(usr, cur = cur, first = first, file = file, device = device, p
                       C = usr_psych$C,
                       E = usr_psych$E,
                       A = usr_psych$A,
-                      N = usr_psych$N)
+                      N = usr_psych$N,
+                      # email information
+                      fraud_work_emails = tmp[["fraud_work_emails"]],
+                      num_unique_from = tmp[["num_unique_from"]],
+                      num_attachments = tmp[["num_attachments"]])
     
     return(row)
     
 }
 
+# unpack combo result into dataframe
+combo_unpack <- function(my_list) {
+    
+    pckg <- my_list[[1]]
+    for (i in 2:length(my_list)) {
+        tmp <- my_list[[i]] 
+        pckg <- plyr::rbind.fill(pckg, tmp)
+    }
+    
+    return(pckg)
+    
+}
+
+
+# run ---------------------------------------------------------------------
+
+
 # # multi-user test
-# pckg <- lapply(users, function(g) combo(usr = g, cur = cur, first = first,
+# pckg <- lapply(users, function(g) combo(usr = g, latest = latest, original = original,
 #                                         file = file, device = device,
 #                                         psych = psych, logon = logon,
 #                                         sup = sup))
 # # single user test
-# test <- combo(usr = sample(users, 1), cur = cur, first = first, file = file,
+# test <- combo(usr = sample(users, 1), latest = latest, original = original, file = file,
 #               device = device, psych = psych,
-#               logon = logon, sup = sup)
+#               logon = logon, sup = sup, email = email)
 
 num_cores <- detectCores() - 2
 cl <- makeCluster(num_cores, type = "FORK")
 clusterExport(cl = cl, varlist = ls())
-pckg <- parLapply(cl = cl, users, function(g) combo(usr = g, cur = cur,
-                                                    first = first, file = file,
+pckg <- parLapply(cl = cl, users, function(g) combo(usr = g, latest = latest,
+                                                    original = original, file = file,
                                         device = device, psych = psych,
-                                        logon = logon, sup = sup))
+                                        logon = logon, sup = sup, email = email))
 stopCluster(cl = cl)
-
-# unpack combo result into dataframe
-unpack <- function(my_list) {
-    
-   pckg <- my_list[[1]]
-   for (i in 2:length(my_list)) {
-      tmp <- my_list[[i]] 
-      pckg <- plyr::rbind.fill(pckg, tmp)
-   }
-   
-   return(pckg)
-    
-}
-
-pckg <- unpack(pckg)
+pckg <- combo_unpack(pckg)
