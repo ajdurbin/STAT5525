@@ -45,7 +45,7 @@ combo <- function(usr, cur = cur, first = first, file = file, device = device, p
         mutate(date = strptime(date, "%m/%d/%Y %H:%M:%S"),
                time = hms::as.hms(date), 
                day = as.Date(date), hour = chron::hours(date)) %>% 
-        select(-date)
+        select(-date) %>% 
         mutate(extension = stringr::str_extract(filename, "[^.]*$")) 
     }
         
