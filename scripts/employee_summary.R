@@ -41,13 +41,43 @@ email_unpack <- function(my_list) {
     
     name <- my_list[[1]][1]
     domain <- my_list[[1]][2]
-    for (i in 2:length(my_list)) {
-        tmp_name = my_list[[i]][1]
-        tmp_domain = my_list[[i]][2]
-        name <- c(name, tmp_name)
-        domain <- c(domain, tmp_domain)
+    if (length(my_list) > 1) {
+        for (i in 2:length(my_list)) {
+            tmp_name = my_list[[i]][1]
+            tmp_domain = my_list[[i]][2]
+            name <- c(name, tmp_name)
+            domain <- c(domain, tmp_domain)
+        } 
     }
     pckg <- data.frame(name = name, domain = domain)
+    
+}
+
+# split the to emails at ";"
+to_split <- function(to){
+    
+    to <- na.omit(to)
+    to <- str_split(to, ";")
+    return(to)
+}
+
+# unpack the to emails to then split at "@" and then email unpack
+to_unpack <- function(to) {
+    
+    to <- unlist(to)
+    return(to)
+    
+}
+
+# email pckg check
+email_check <- function(pckg){
+    
+    for (i in 1:length(pckg)) {
+        if (is.null(pckg[[i]])) {
+            pckg[[i]] <- 0
+        }
+    }
+    return(pckg)
     
 }
 
@@ -73,11 +103,38 @@ email_process <- function(usr = usr, usr_email = usr_email, original = original)
     usr_from_dictionary <- unique(usr_from_dictionary)
     # find if they sending emails under someone else's username
     fraud_work_emails <- sum(usr_from_dictionary$name %in% employee_email_dictionary$name)
-    num_unique_from <- nrow(usr_from_dictionary)
-    num_attachments <- sum(usr_email$attachments)
+    # do splits and get information on to emails
+    usr_to_dictionary <- to_split(usr_email$to)
+    usr_to_dictionary <- to_unpack(usr_to_dictionary)
+    usr_to_dictionary <- str_split(usr_to_dictionary, "@")
+    usr_to_dictionary <- email_unpack(usr_to_dictionary)
+    usr_to_dictionary <- unique(usr_to_dictionary)
+    # now do same for cc
+    usr_cc_dictionary <- to_split(usr_email$cc)
+    usr_cc_dictionary <- to_unpack(usr_cc_dictionary)
+    if (length(usr_cc_dictionary) != 0) {
+        usr_cc_dictionary <- str_split(usr_cc_dictionary, "@")
+        usr_cc_dictionary <- email_unpack(usr_cc_dictionary)
+        usr_cc_dictionary <- unique(usr_cc_dictionary)
+    }
+    # now do same for bcc
+    usr_bcc_dictionary <- to_split(usr_email$bcc)
+    usr_bcc_dictionary <- to_unpack(usr_bcc_dictionary)
+    if (length(usr_bcc_dictionary) != 0) {
+        usr_bcc_dictionary <- str_split(usr_bcc_dictionary, "@")
+        usr_bcc_dictionary <- email_unpack(usr_bcc_dictionary)
+        usr_bcc_dictionary <- unique(usr_bcc_dictionary)
+    }
     pckg <- list(fraud_work_emails = fraud_work_emails,
-                 num_unique_from = num_unique_from,
-                 num_attachments = num_attachments)
+                 total_emails = nrow(usr_email),
+                 total_unique_from = nrow(usr_from_dictionary),
+                 total_unique_to = nrow(usr_to_dictionary),
+                 total_unique_cc = nrow(usr_cc_dictionary),
+                 total_unique_bcc = nrow(usr_bcc_dictionary),
+                 total_attachments = sum(usr_email$attachments),
+                 total_non_work = sum(usr_to_dictionary$domain != "dtaa.com"),
+                 total_after_hours = sum(usr_email$hour < 5 & usr_email$hour > 0))
+    pckg <- email_check(pckg)
     return(pckg)
     
 }
@@ -88,6 +145,8 @@ email_process <- function(usr = usr, usr_email = usr_email, original = original)
 #                   sup = sup) {
 combo <- function(usr, latest = latest, original = original, file = file, device = device, psych = psych,
                   logon = logon, sup = sup, email = email) {
+    
+    cat("\n", usr, "\n\n")
     
     # file downloads
     usr_file <- file %>%
@@ -113,14 +172,19 @@ combo <- function(usr, latest = latest, original = original, file = file, device
 
     # logon
     usr_logon <- logon %>%
-        filter(user == usr) %>%
-        mutate(date = strptime(date, "%m/%d/%Y %H:%M:%S"), time = hms::as.hms(date),
-               day = as.Date(date), hour = chron::hours(date)) %>% 
-       select(-date) 
-
-    after_hour_logon <- usr_logon %>%
-        filter(activity == "Logon") %>%
-        filter(hour > 0 & hour < 5)
+        filter(user == usr)
+    if (nrow(usr_logon) != 0) {
+        usr_logon <- usr_logon %>% 
+            mutate(date = strptime(date, "%m/%d/%Y %H:%M:%S"), time = hms::as.hms(date),
+                   day = as.Date(date), hour = chron::hours(date)) %>% 
+            select(-date)  
+        
+        after_hour_logon <- usr_logon %>%
+            filter(activity == "Logon") %>%
+            filter(hour > 0 & hour < 5)
+    } else {
+        after_hour_logon <- data.frame()
+    }
 
     # supervisor information
     supervisor <- original %>%
@@ -150,7 +214,20 @@ combo <- function(usr, latest = latest, original = original, file = file, device
         mutate(date = strptime(date, "%m/%d/%Y %H:%M:%S"), time = hms::as.hms(date),
                day = as.Date(date), hour = chron::hours(date)) %>%
         select(-date)
-    tmp <- email_process(usr = usr, usr_email = usr_email, original = original)
+    if (nrow(usr_email) != 0) {
+        tmp <- email_process(usr = usr, usr_email = usr_email, original = original)
+    } else {
+        tmp <- list(fraud_work_emails = 0,
+                    total_emails = 0,
+                    total_unique_from = 0,
+                    total_unique_to = 0,
+                    total_unique_cc = 0,
+                    total_unique_bcc = 0,
+                    total_attachments = 0,
+                    total_non_work = 0,
+                    total_after_hours = 0)
+    }
+    
 
     # # web
     # usr_http <- http %>%
@@ -203,8 +280,14 @@ combo <- function(usr, latest = latest, original = original, file = file, device
                       N = usr_psych$N,
                       # email information
                       fraud_work_emails = tmp[["fraud_work_emails"]],
-                      num_unique_from = tmp[["num_unique_from"]],
-                      num_attachments = tmp[["num_attachments"]])
+                      total_emails = tmp[["total_emails"]],
+                      total_email_attachments = tmp[["total_attachments"]],
+                      total_after_hour_emails = tmp[["total_after_hours"]],
+                      total_non_work_emails = tmp[["total_non_work"]],
+                      total_unique_from = tmp[["total_unique_from"]],
+                      total_unique_to = tmp[["total_unique_to"]],
+                      total_unique_cc = tmp[["total_unique_cc"]],
+                      total_unique_bcc = tmp[["total_unique_bcc"]])
     
     return(row)
     
@@ -227,22 +310,26 @@ combo_unpack <- function(my_list) {
 # run ---------------------------------------------------------------------
 
 
-# # multi-user test
-# pckg <- lapply(users, function(g) combo(usr = g, latest = latest, original = original,
-#                                         file = file, device = device,
-#                                         psych = psych, logon = logon,
-#                                         sup = sup))
-# # single user test
-# test <- combo(usr = sample(users, 1), latest = latest, original = original, file = file,
-#               device = device, psych = psych,
-#               logon = logon, sup = sup, email = email)
-
-num_cores <- detectCores() - 2
-cl <- makeCluster(num_cores, type = "FORK")
-clusterExport(cl = cl, varlist = ls())
-pckg <- parLapply(cl = cl, users, function(g) combo(usr = g, latest = latest,
-                                                    original = original, file = file,
-                                        device = device, psych = psych,
-                                        logon = logon, sup = sup, email = email))
-stopCluster(cl = cl)
-pckg <- combo_unpack(pckg)
+# multi-user test
+pckg <- lapply(users, function(g) combo(usr = g, latest = latest, original = original,
+                                        file = file, device = device,
+                                        psych = psych, logon = logon,
+                                        sup = sup, email = email))
+# single user test
+test <- combo(usr = sample(users, 1), latest = latest, original = original, file = file,
+              device = device, psych = psych,
+              logon = logon, sup = sup, email = email)
+# problem user debugging
+test <- combo(usr = "MNR0829", latest = latest, original = original, file = file,
+              device = device, psych = psych,
+              logon = logon, sup = sup, email = email)
+# # parallel
+# num_cores <- detectCores() - 2
+# cl <- makeCluster(num_cores, type = "FORK")
+# clusterExport(cl = cl, varlist = ls())
+# pckg <- parLapply(cl = cl, users, function(g) combo(usr = g, latest = latest,
+#                                                     original = original, file = file,
+#                                         device = device, psych = psych,
+#                                         logon = logon, sup = sup, email = email))
+# stopCluster(cl = cl)
+# pckg <- combo_unpack(pckg)
