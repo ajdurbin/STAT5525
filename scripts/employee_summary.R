@@ -1,9 +1,17 @@
 rm(list = ls())
+<<<<<<< HEAD
 # ._ <- c("dplyr", "readr", "plyr", "chron", "hms", "glmnet", "caret",
 #         "randomForest", "rpart", "stringr", "tm", "wordcloud",
 #         "animation", "ggplot2", "SnowballC", "topicmodels", "parallel",
 #         "tidytext")
 ._ <- c("dplyr", "readr", "plyr", "chron", "hms", "parallel", "stringr")
+=======
+#._ <- c("dplyr", "readr", "plyr", "chron", "hms", "glmnet", "caret",
+        #"randomForest", "rpart", "stringr", "tm", "wordcloud",
+        #"animation", "ggplot2", "SnowballC", "topicmodels", "parallel",
+        #"tidytext")
+._ <- c("dplyr", "readr", "plyr", "chron", "hms", "parallel")
+>>>>>>> 48198b5b4166fd346a0cdd005b175dd761586422
 lapply(._, library, character.only = TRUE)
 
 
@@ -24,7 +32,8 @@ sup <- latest %>%
     select(employee_name, user_id, email)
 
 # test local before remote run
-email <- read_csv("../data/email_small.csv")
+#email <- read_csv("../data/email_small.csv")
+email <- read_csv("../raw/email_info.csv")
 # f <- function(x, pos){
 #     return(x[, c(2, 3, 4, 5)])
 # }
@@ -312,6 +321,7 @@ combo_unpack <- function(my_list) {
 # run ---------------------------------------------------------------------
 
 
+<<<<<<< HEAD
 # # multi-user test
 # pckg <- lapply(users, function(g) combo(usr = g, latest = latest, original = original,
 #                                         file = file, device = device,
@@ -328,6 +338,24 @@ combo_unpack <- function(my_list) {
 # parallel
 num_cores <- detectCores() - 1
 cl <- makeCluster(num_cores, type = "FORK")
+=======
+# multi-user test
+#pckg <- lapply(users, function(g) combo(usr = g, latest = latest, original = original,
+                                        #file = file, device = device,
+                                        #psych = psych, logon = logon,
+                                        #sup = sup, email = email))
+## single user test
+#test <- combo(usr = sample(users, 1), latest = latest, original = original, file = file,
+              #device = device, psych = psych,
+              #logon = logon, sup = sup, email = email)
+# problem user debugging
+#test <- combo(usr = "MNR0829", latest = latest, original = original, file = file,
+              #device = device, psych = psych,
+              #logon = logon, sup = sup, email = email)
+# parallel
+num_cores <- detectCores() - 2
+cl <- makeCluster(num_cores, type = "MPI")
+>>>>>>> 48198b5b4166fd346a0cdd005b175dd761586422
 clusterExport(cl = cl, varlist = ls())
 pckg <- parLapply(cl = cl, users, function(g) combo(usr = g, latest = latest,
                                                     original = original, file = file,
@@ -335,4 +363,7 @@ pckg <- parLapply(cl = cl, users, function(g) combo(usr = g, latest = latest,
                                         logon = logon, sup = sup, email = email))
 stopCluster(cl = cl)
 pckg <- combo_unpack(pckg)
+<<<<<<< HEAD
 write_csv(pckg, "../data/employee_summary.csv")
+=======
+>>>>>>> 48198b5b4166fd346a0cdd005b175dd761586422
