@@ -1,8 +1,9 @@
 rm(list = ls())
-._ <- c("dplyr", "readr", "plyr", "chron", "hms", "glmnet", "caret",
-        "randomForest", "rpart", "stringr", "tm", "wordcloud",
-        "animation", "ggplot2", "SnowballC", "topicmodels", "parallel",
-        "tidytext")
+# ._ <- c("dplyr", "readr", "plyr", "chron", "hms", "glmnet", "caret",
+#         "randomForest", "rpart", "stringr", "tm", "wordcloud",
+#         "animation", "ggplot2", "SnowballC", "topicmodels", "parallel",
+#         "tidytext")
+._ <- c("dplyr", "readr", "plyr", "chron", "hms", "parallel", "stringr")
 lapply(._, library, character.only = TRUE)
 
 
@@ -245,6 +246,7 @@ combo <- function(usr, latest = latest, original = original, file = file, device
                       supervisor_id = supervisor_info$user_id,
                       supervisor_email = supervisor_info$email,
                       # attrition
+                      # false means fired
                       attrition = usr %in% latest$user_id,
                       # file download information
                       total_downloads = nrow(usr_file),
@@ -310,26 +312,27 @@ combo_unpack <- function(my_list) {
 # run ---------------------------------------------------------------------
 
 
-# multi-user test
-pckg <- lapply(users, function(g) combo(usr = g, latest = latest, original = original,
-                                        file = file, device = device,
-                                        psych = psych, logon = logon,
-                                        sup = sup, email = email))
-# single user test
-test <- combo(usr = sample(users, 1), latest = latest, original = original, file = file,
-              device = device, psych = psych,
-              logon = logon, sup = sup, email = email)
-# problem user debugging
-test <- combo(usr = "MNR0829", latest = latest, original = original, file = file,
-              device = device, psych = psych,
-              logon = logon, sup = sup, email = email)
-# # parallel
-# num_cores <- detectCores() - 2
-# cl <- makeCluster(num_cores, type = "FORK")
-# clusterExport(cl = cl, varlist = ls())
-# pckg <- parLapply(cl = cl, users, function(g) combo(usr = g, latest = latest,
-#                                                     original = original, file = file,
-#                                         device = device, psych = psych,
-#                                         logon = logon, sup = sup, email = email))
-# stopCluster(cl = cl)
-# pckg <- combo_unpack(pckg)
+# # multi-user test
+# pckg <- lapply(users, function(g) combo(usr = g, latest = latest, original = original,
+#                                         file = file, device = device,
+#                                         psych = psych, logon = logon,
+#                                         sup = sup, email = email))
+# # single user test
+# test <- combo(usr = sample(users, 1), latest = latest, original = original, file = file,
+#               device = device, psych = psych,
+#               logon = logon, sup = sup, email = email)
+# # problem user debugging
+# test <- combo(usr = "MNR0829", latest = latest, original = original, file = file,
+#               device = device, psych = psych,
+#               logon = logon, sup = sup, email = email)
+# parallel
+num_cores <- detectCores() - 1
+cl <- makeCluster(num_cores, type = "FORK")
+clusterExport(cl = cl, varlist = ls())
+pckg <- parLapply(cl = cl, users, function(g) combo(usr = g, latest = latest,
+                                                    original = original, file = file,
+                                        device = device, psych = psych,
+                                        logon = logon, sup = sup, email = email))
+stopCluster(cl = cl)
+pckg <- combo_unpack(pckg)
+write_csv(pckg, "../data/employee_summary.csv")
