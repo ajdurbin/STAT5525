@@ -9,11 +9,18 @@ file <- read_csv("../raw/file_info.csv") %>%
     mutate(time = hms::as.hms(date)) %>% 
     mutate(hour = lubridate::hour(time)) %>% 
     mutate(extension = str_extract(filename, "[^.]*$")) %>% 
-    mutate(keylogger = str_detect(content, "key")) %>% 
+    mutate(keylogger = str_detect(content, "keylog")) %>% 
     mutate(virus = str_detect(content, "virus")) %>% 
+    mutate(password = str_detect(content, "password")) %>% 
     mutate(malware = str_detect(content, "malware"))
 
 mal <- file %>%
     filter(malware == TRUE)
 virus <- file %>%
     filter(virus == TRUE)
+key <- file %>%
+    filter(keylogger == TRUE)
+pass <- file %>%
+    filter(password == TRUE)
+# has two true things, rest are contained in the mal and key
+

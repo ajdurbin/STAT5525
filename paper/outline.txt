@@ -1,0 +1,72 @@
+data handling:
+describe how we used ARC for all of data processing, how we added in the
+missing logoffs/usb disconnects. describe how data was aggregated, we made
+large data frames of all the files put together, added indicators for
+attrition, added average logon-logoff times, etc. added day of week variables,
+after hours, etc
+
+variable creation:
+after hours activity of usb/web traffic/etc
+average logon-logoff time, average usb time, average websites visited per
+minute
+what domains they visited - could characterize user traffic, ie someone
+visiting russian domains could be up to no good, demonoid.me, etc
+these were important because we wanted to identify suspicious user behavior,
+working between midnight and 4am is bad
+also intermediate connection of usb to logon to different machines, etc
+important because this could be information leaking/stealing
+
+data aggregation:
+people were grouped by role first to identifiy within group differences
+supervisor versus non supervisor
+fired versus nonfired
+wanted to see if we could get black and white differences
+people who work at night - more interesting stuff here
+NEED MORE HERE
+
+explanatory/predictive modeling:
+wanted to first characterize user web traffic/logon traffic/file traffic to
+first predict user attrition
+could be useful to keep track of users overtime and see if they are fitting the
+criteria for someone near leaving
+choose logistic lasso for each of these
+did not base the model fits of the entire aggregated data, we fit models for
+the last day of each attritioned user to make it a comparable overtime
+comparison of users to better fit and identify differences
+this would include a model validation strrategy
+discuss how model performs better over time
+
+model justification:
+could be logistic lasso versus cart tree
+NEED MORE HERE
+
+computational consideration and demands/computational modelign choices
+clearly discuss working on the arc machines, how it was difficult to begin
+running jobs here without first rbeaking data into chunks and even then how it
+was more useful to write functions for reading chunks at a time and aggregate
+them later.
+talk about how simply fitting neural net on everything wasn't helpful?
+talk about making a network of emailers or pc users and who works together was
+too computational intensive
+how we tried lda/sentiment analysis and it was inconclusive
+just emphasize that functions were written to only work on chunks of the data
+before aggregating later. this didn't affect our simple models by design
+
+impacts:
+discuss how results are important for leadership to better identify risky users
+and those who are near leaving the company or whos behavior fits in with users
+who have left
+
+written paper:
+just make sure there are no grammatical errors/write paragraphs with sections,
+etc
+
+sections:
+split into data1/2?
+heard that data1 section should be super short
+his paper says minimally should include sections which address motivation,
+discussion of data, discussion of methods used, and conclusions/suggestions
+pertaining to the problem 
+split paper into data1/data2 where data1 takes maybe a single page
+where to easter eggs fit into paper, maybe in their own paragraph
+major goal is to identify suspicious user activity and what leads up to this? 
