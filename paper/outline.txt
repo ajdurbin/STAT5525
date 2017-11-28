@@ -39,6 +39,10 @@ discuss how model performs better over time
 model justification:
 could be logistic lasso versus cart tree
 NEED MORE HERE
+talk about just trying to come up with variables but didint know what variabls
+were most important, instead of using just cart.
+we wanted a good balance between predicitive power without penalty for trying
+new variables in our model fits. 
 
 computational consideration and demands/computational modelign choices
 clearly discuss working on the arc machines, how it was difficult to begin
