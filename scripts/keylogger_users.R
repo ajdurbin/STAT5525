@@ -72,6 +72,10 @@ included_emails <- email %>%
     mutate(first = str_detect(content, first)) %>% 
     mutate(last = str_detect(content, last)) %>% 
     filter(first == TRUE)
+# hard to decipher emails with her name in them
+# but they stop near the time of her leaving
+# she is not recepient of any of these emails either
+# hard to know what they mean
 when <- key %>% 
     filter(user == usr)
 usr_file <- file %>%
@@ -92,3 +96,132 @@ logon_after <- logon %>%
 usb_after <- usr_device %>% 
     filter(day >= when$day)
 # who uses this pc
+# we see that she only connects to put the keylogger on the machine
+# and then logs on to it one more time
+# what about her email she got from lockheed martin or whatever?
+
+# new user
+# this user did do this first:
+# they have evidence of other bad users logging onto this machine
+# that malware is installed on a couple times
+# need to filter emails to/from these peoples and maybe see some 
+# thing interesting, what are job roles/etc
+usr <- "CSC0217"
+when <- key %>% 
+    filter(user == usr)
+usr_file <- file %>%
+    filter(user == usr)
+usr_device <- device %>%
+    filter(user == usr)
+usr_web <- http %>% 
+    filter(user == usr)
+usr_email <- email %>% 
+    filter(user == usr)
+usr_logon <- logon %>%
+    filter(user == usr)
+
+unique(usr_email$from)
+work_email <- "Cathleen.Samantha.Craig@dtaa.com"
+personal_email <- "Cathleen.S.Craig@netzero.com"
+received_emails <- email %>%
+    mutate(work = str_detect(to, work_email)) %>% 
+    mutate(personal = str_detect(to, personal_email)) %>% 
+    filter(work == TRUE | personal == TRUE)
+first <- "cathleen"
+last <- "craig"
+included_emails <- email %>%
+    mutate(first = str_detect(content, first)) %>% 
+    mutate(last = str_detect(content, last)) %>% 
+    filter(first == TRUE | last == TRUE)
+# first name does not come up in emails
+usb_after <- usr_device %>% 
+    filter(day >= when$day)
+pc_after_malware <- "PC-5866"
+logon_after <- logon %>% 
+    filter(day >= when$day) %>% 
+    filter(pc == pc_after_malware)
+# we see at least one other bad user, JTM0223 logon to this machine after
+# we check all other users if they get on this machine after installation
+# date
+bad_users_logon <- rep(FALSE, length(bad_users))
+bad_users_connects <- rep(0, length(bad_users))
+for (i in 1:length(bad_users)) {
+    u <- bad_users[i]
+    if (u %in% logon_after$user) {
+        bad_users_logon[i] <- TRUE
+    }
+    tmp <- logon_after %>% 
+        filter(activity == "Logon") %>% 
+        filter(user == u)
+    bad_users_connects[i] <- nrow(tmp)
+}
+bad_users
+bad_users_logon
+bad_users_connects
+# we see that all but one of these bad users logon to this machine
+# after the malware/keylogger is installed
+# now lets find these peoples roles/just get simple information on them
+# write function a little later, keep looking now
+# next question is do they email each other? 
+# need function to process this information now:
+bad_user_function <- function(user, .logon = logon, .file = file, 
+                              .email = email, .http = http,
+                              .device = device, .current = current,
+                              .original = original, .key = key) {
+    
+    user_file <- .file %>%
+        filter(user == user)
+    user_device <- .device %>%
+        filter(user == user)
+    user_web <- .http %>% 
+        filter(user == user)
+    user_email <- .email %>% 
+        filter(user == user)
+    user_logon <- .logon %>%
+        filter(user == user)
+    user_info <- .original %>% 
+        filter(user_id == user)
+    when <- .key %>% 
+        filter(user == user)
+    when <- when$day
+    
+    row <- data.frame(employee_name = user_info$employee_name,
+                      user_id = user_info$user_id,
+                      email = user_info$email,
+                      role = user_info$role,
+                      business_unit = user_info$business_unit,
+                      functional_unit = user_info$functional_unit,
+                      department = user_info$department,
+                      team = user_info$team,
+                      supervisor = user_info$supervisor,
+                      attrition = 
+                          ifelse(user %in% current$user_id, FALSE, TRUE),
+                      keylogger_download_date = when)
+    return(row)
+    
+}
+
+list_unpack <- function(my_list) {
+    
+    pckg <- my_list[[1]]
+    for (i in 2:length(my_list)) {
+        tmp <- my_list[[i]]
+        pckg <- rbind(pckg, tmp)
+    }
+    return(pckg)
+    
+}
+
+# serial run
+result <- lapply(bad_users, function(g) bad_user_function(user = g))
+result <- list_unpack(result)
+
+# parallel run, not necessary but cool
+no_cores <- detectCores() - 1
+cl <- makeCluster(no_cores, type = "FORK")
+clusterExport(cl = cl, ls())
+result <- parLapply(cl = cl,bad_users, 
+                 function(g) bad_user_function(user = g))
+stopCluster(cl = cl)
+result <- list_unpack(result)
+

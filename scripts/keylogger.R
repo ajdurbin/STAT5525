@@ -111,7 +111,8 @@ list_to_df <- function(my_list) {
 
 usb_users <- unique(device$user)
 result <- lapply(usb_users, 
-                 function(g) usb_function(usr = g, device = device, file = file))
+                 function(g) 
+                     usb_function(usr = g, device = device, file = file))
 result <- list_to_df(result)
 ah <- result %>% 
     filter(after_hour_downloads > 0) %>% 
