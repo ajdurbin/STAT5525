@@ -1,0 +1,23 @@
+scales pacakge for ggplots
+animation package:
+https://ryouready.wordpress.com/2010/11/21/animate-gif-images-in-r-imagemagick/
+url encoding, decoding with urltools package
+https://cran.r-project.org/web/packages/urltools/vignettes/urltools.html
+virginia working with times and dates with lubridate:
+http://data.library.virginia.edu/working-with-dates-and-time-in-r-using-the-lubridate-package/
+ggplot posixt cheatsheet:
+http://matpalm.com/blog/2012/03/18/ggplot_posix_cheat_sheet/
+topic modeling in R:
+http://davidmeza1.github.io/2015/07/20/topic-modeling-in-R.html
+basic text mining in R:
+http://rstudio-pubs-static.s3.amazonaws.com/256588_57b585da6c054349825cba46685d8464.html
+uc busines analytics R programming text mining:
+http://uc-r.github.io/tidy_text
+sentiment analysis R tutorial:
+http://blog.kaggle.com/2017/10/05/data-science-101-sentiment-analysis-in-r-tutorial/
+http://rpubs.com/chengjun/sentiment
+https://www.r-bloggers.com/sentiment-analysis-on-donald-trump-using-r-and-tableau/
+tidytext:
+https://cran.r-project.org/web/packages/tidytext/vignettes/tidytext.html
+wordclouds:
+https://www.r-bloggers.com/building-wordclouds-in-r/
