@@ -228,8 +228,84 @@ usr_dayof_logon <- logon %>%
 sup_dayof_email <- email %>%
     filter(from == sup) %>% 
     filter(day == when$day)
+# look at infected machine
+infected_pc <- "PC-5866"
+infected_pc_users <- logon %>%
+    filter(pc == infected_pc) %>% 
+    select(user) %>% 
+    unique()
+infected_pc_users <- infected_pc_users$user
+# check these users out for roles, etc
+infected_pc_users <- employee_summary %>% 
+    filter(employee_id %in% infected_pc_users)
+# look at logon traffic afterwards
+infected_pc_logon_after <- logon %>% 
+    filter(day >= when$day) %>% 
+    filter(pc == infected_pc)
+infected_pc_usb_after <- usr_device %>% 
+    filter(day >= when$day) %>% 
+    filter(pc == infected_pc)
 
 
+
+# fifth user
+usr <- "JLM0364" 
+usr_info <- employee_summary %>% 
+    filter(employee_id == usr)
+sup <- usr_info$supervisor_email
+when <- key %>% 
+    filter(user == usr)
+usr_file <- file %>%
+    filter(user == usr)
+usr_device <- device %>%
+    filter(user == usr)
+usr_web <- http %>% 
+    filter(user == usr)
+usr_email <- email %>% 
+    filter(user == usr)
+usr_logon <- logon %>%
+    filter(user == usr)
+usr_dayof_web <- http %>%
+    filter(user == usr) %>% 
+    filter(day == when$day)
+usr_dayof_email <- email %>%
+    filter(user == usr) %>% 
+    filter(day == when$day)
+usr_dayof_logon <- logon %>%
+    filter(user == usr) %>% 
+    filter(day == when$day)
+sup_dayof_email <- email %>%
+    filter(from == sup) %>% 
+    filter(day == when$day)
+usr_dayof_device <- device %>%
+    filter(user == usr) %>% 
+    filter(day == when$day)
+usr_dayof_file <- file %>%
+    filter(user == usr) %>% 
+    filter(day == when$day)
+# look at infected machine
+infected_pc <- "PC-8486"
+infected_pc <- "PC-0967"
+infected_pc_primary_user <- employee_summary %>% 
+    filter(primary_pc == infected_pc)
+infected_pc_primary_user <- infected_pc_primary_user$employee_id
+infected_pc_users <- logon %>%
+    filter(pc == infected_pc) %>% 
+    select(user) %>% 
+    unique()
+infected_pc_users <- infected_pc_users$user
+# check these users out for roles, etc
+infected_pc_users <- employee_summary %>% 
+    filter(employee_id %in% infected_pc_users)
+# look at logon traffic afterwards
+infected_pc_logon_after <- logon %>% 
+    filter(day >= when$day) %>% 
+    filter(pc == infected_pc) %>% 
+    filter(user != infected_pc_primary_user)
+infected_pc_usb_after <- usr_device %>% 
+    filter(day >= when$day) %>% 
+    filter(pc == infected_pc) %>% 
+    filter(user != infected_pc_primary_user)
 
 
 
@@ -242,9 +318,14 @@ sup_dayof_email <- email %>%
 # look at some keywords that the users send their supervisors and
 # same for supervisors and their constituents
 key_words <- email %>% 
-    mutate(word = str_detect(content, "holidays | weekends")) %>% 
+    mutate(word = str_detect(content, "promotion")) %>% 
     filter(word == TRUE)
-
+key_words <- file %>% 
+    mutate(word = str_detect(content, "surveillance")) %>% 
+    filter(word == TRUE)
+key_words <- http %>% 
+    mutate(word = str_detect(content, "surveillance")) %>% 
+    filter(word == TRUE)
 
 
 
