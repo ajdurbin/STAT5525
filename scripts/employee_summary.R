@@ -1,29 +1,34 @@
 rm(list = ls())
-<<<<<<< HEAD
-# ._ <- c("dplyr", "readr", "plyr", "chron", "hms", "glmnet", "caret",
-#         "randomForest", "rpart", "stringr", "tm", "wordcloud",
-#         "animation", "ggplot2", "SnowballC", "topicmodels", "parallel",
-#         "tidytext")
-._ <- c("dplyr", "readr", "plyr", "chron", "hms", "parallel", "stringr")
-=======
-#._ <- c("dplyr", "readr", "plyr", "chron", "hms", "glmnet", "caret",
-        #"randomForest", "rpart", "stringr", "tm", "wordcloud",
-        #"animation", "ggplot2", "SnowballC", "topicmodels", "parallel",
-        #"tidytext")
-._ <- c("dplyr", "readr", "plyr", "chron", "hms", "parallel")
->>>>>>> 48198b5b4166fd346a0cdd005b175dd761586422
+# ._ <- c("dplyr", "readr", "plyr", "lubridate", "hms", "stringr",
+#         "parallel")
+._ <- c("dplyr", "readr", "lubridate", "hms", "stringr", "parallel")
 lapply(._, library, character.only = TRUE)
 
 
 # load data ---------------------------------------------------------------
 
 
-file <- read_csv("../raw/file_info.csv")
-device <- read_csv("../raw/device_info.csv")
+file <- read_csv("../raw/file_info.csv") %>% 
+    mutate(date = lubridate::mdy_hms(date)) %>% 
+    mutate(day = lubridate::as_date(date)) %>% 
+    mutate(weekday = lubridate::wday(day, label = TRUE, abbr = FALSE)) %>% 
+    mutate(time = hms::as.hms(date)) %>% 
+    mutate(hour = lubridate::hour(time)) 
+device <- read_csv("../raw/device_info.csv") %>% 
+    mutate(date = lubridate::mdy_hms(date)) %>% 
+    mutate(day = lubridate::as_date(date)) %>% 
+    mutate(weekday = lubridate::wday(day, label = TRUE, abbr = FALSE)) %>% 
+    mutate(time = hms::as.hms(date)) %>% 
+    mutate(hour = lubridate::hour(time)) 
 psych <- read_csv("../raw/psychometric_info.csv")
 latest <- read_csv("../raw/LDAP/2011-05.csv")
 original <- read_csv("../raw/LDAP/2009-12.csv")
-logon <- read_csv("../raw/logon_info.csv")
+logon <- read_csv("../raw/logon_info.csv") %>% 
+    mutate(date = lubridate::mdy_hms(date)) %>% 
+    mutate(day = lubridate::as_date(date)) %>% 
+    mutate(weekday = lubridate::wday(day, label = TRUE, abbr = FALSE)) %>% 
+    mutate(time = hms::as.hms(date)) %>% 
+    mutate(hour = lubridate::hour(time)) 
 
 # supervisor dictionary
 sup <- unique(latest$supervisor)
@@ -33,7 +38,12 @@ sup <- latest %>%
 
 # test local before remote run
 #email <- read_csv("../data/email_small.csv")
-email <- read_csv("../raw/email_info.csv")
+email <- read_csv("../raw/email_info.csv") %>% 
+    mutate(date = lubridate::mdy_hms(date)) %>% 
+    mutate(day = lubridate::as_date(date)) %>% 
+    mutate(weekday = lubridate::wday(day, label = TRUE, abbr = FALSE)) %>% 
+    mutate(time = hms::as.hms(date)) %>% 
+    mutate(hour = lubridate::hour(time)) 
 # f <- function(x, pos){
 #     return(x[, c(2, 3, 4, 5)])
 # }
@@ -163,38 +173,36 @@ combo <- function(usr, latest = latest, original = original, file = file, device
         filter(user == usr) 
     if (nrow(usr_file) != 0) {
         usr_file <- usr_file %>% 
-        mutate(date = strptime(date, "%m/%d/%Y %H:%M:%S"),
-               time = hms::as.hms(date), 
-               day = as.Date(date), hour = chron::hours(date)) %>% 
-        select(-date) %>% 
-        mutate(extension = stringr::str_extract(filename, "[^.]*$")) 
+            mutate(extension = stringr::str_extract(filename, "[^.]*$")) 
     }
     
     # usb connects
     usr_device <- device %>%
         filter(user == usr)
-    if (nrow(usr_device) != 0){
-        usr_device <- usr_device %>%
-        mutate(date = strptime(date, "%m/%d/%Y %H:%M:%S"), time = hms::as.hms(date),
-               day = as.Date(date), hour = chron::hours(date)) %>% 
-        select(-date)
+    if (nrow(usr_device) != 0) {
+        
     }
 
     # logon
     usr_logon <- logon %>%
         filter(user == usr)
     if (nrow(usr_logon) != 0) {
-        usr_logon <- usr_logon %>% 
-            mutate(date = strptime(date, "%m/%d/%Y %H:%M:%S"), time = hms::as.hms(date),
-                   day = as.Date(date), hour = chron::hours(date)) %>% 
-            select(-date)  
-        
         after_hour_logon <- usr_logon %>%
             filter(activity == "Logon") %>%
             filter(hour > 0 & hour < 5)
     } else {
         after_hour_logon <- data.frame()
     }
+    
+    # get primary machine
+    primary_pc <- usr_logon %>% 
+        group_by(pc) %>% 
+        mutate(N = n()) %>% 
+        ungroup() %>% 
+        filter(N == max(N)) %>% 
+        select(pc) %>% 
+        unique() %>% 
+        as.character()
 
     # supervisor information
     supervisor <- original %>%
@@ -220,10 +228,9 @@ combo <- function(usr, latest = latest, original = original, file = file, device
 
     # email
     usr_email <- email %>%
-        filter(user == usr) %>%
-        mutate(date = strptime(date, "%m/%d/%Y %H:%M:%S"), time = hms::as.hms(date),
-               day = as.Date(date), hour = chron::hours(date)) %>%
-        select(-date)
+        filter(user == usr)
+        
+        
     if (nrow(usr_email) != 0) {
         tmp <- email_process(usr = usr, usr_email = usr_email, original = original)
     } else {
@@ -250,6 +257,8 @@ combo <- function(usr, latest = latest, original = original, file = file, device
                       employee_id = usr,
                       employee_email = usr_original$email,
                       employee_role = usr_original$role,
+                      # primary pc
+                      primary_pc = primary_pc,
                       # supervisor information
                       supervisor_name = supervisor_info$employee_name,
                       supervisor_id = supervisor_info$user_id,
@@ -320,8 +329,6 @@ combo_unpack <- function(my_list) {
 
 # run ---------------------------------------------------------------------
 
-
-<<<<<<< HEAD
 # # multi-user test
 # pckg <- lapply(users, function(g) combo(usr = g, latest = latest, original = original,
 #                                         file = file, device = device,
@@ -336,34 +343,15 @@ combo_unpack <- function(my_list) {
 #               device = device, psych = psych,
 #               logon = logon, sup = sup, email = email)
 # parallel
-num_cores <- detectCores() - 1
+num_cores <- detectCores()
 cl <- makeCluster(num_cores, type = "FORK")
-=======
-# multi-user test
-#pckg <- lapply(users, function(g) combo(usr = g, latest = latest, original = original,
-                                        #file = file, device = device,
-                                        #psych = psych, logon = logon,
-                                        #sup = sup, email = email))
-## single user test
-#test <- combo(usr = sample(users, 1), latest = latest, original = original, file = file,
-              #device = device, psych = psych,
-              #logon = logon, sup = sup, email = email)
-# problem user debugging
-#test <- combo(usr = "MNR0829", latest = latest, original = original, file = file,
-              #device = device, psych = psych,
-              #logon = logon, sup = sup, email = email)
-# parallel
-num_cores <- detectCores() - 2
-cl <- makeCluster(num_cores, type = "MPI")
->>>>>>> 48198b5b4166fd346a0cdd005b175dd761586422
 clusterExport(cl = cl, varlist = ls())
-pckg <- parLapply(cl = cl, users, function(g) combo(usr = g, latest = latest,
-                                                    original = original, file = file,
-                                        device = device, psych = psych,
-                                        logon = logon, sup = sup, email = email))
+pckg <- parLapply(cl = cl, users, 
+                  function(g) combo(usr = g, latest = latest, 
+                                    original = original, file = file,
+                                    device = device, psych = psych,
+                                    logon = logon, sup = sup, 
+                                    email = email))
 stopCluster(cl = cl)
 pckg <- combo_unpack(pckg)
-<<<<<<< HEAD
 write_csv(pckg, "../data/employee_summary.csv")
-=======
->>>>>>> 48198b5b4166fd346a0cdd005b175dd761586422

@@ -2,14 +2,15 @@
 # goal is to look at their traffic and find them somehow spreading this
 # to other machines
 rm(list = ls())
-._ <- c("dplyr", "readr", "plyr", "lubridate", "hms", "stringr", "parallel")
+._ <- c("dplyr", "readr", "lubridate", "hms", "stringr", "parallel")
 lapply(._, library, character.only = TRUE)
 
-current <- read_csv("../raw/LDAP/2011-05.csv")
-original <- read_csv("../raw/LDAP/2009-12.csv")
+# current <- read_csv("../raw/LDAP/2011-05.csv")
+# original <- read_csv("../raw/LDAP/2009-12.csv")
 file <- read_csv("../raw/file_info.csv") %>% 
     mutate(date = lubridate::mdy_hms(date)) %>% 
     mutate(day = lubridate::as_date(date)) %>% 
+    mutate(weekday = lubridate::wday(day, label = TRUE, abbr = FALSE)) %>% 
     mutate(time = hms::as.hms(date)) %>% 
     mutate(hour = lubridate::hour(time)) %>% 
     mutate(extension = str_extract(filename, "[^.]*$")) %>% 
@@ -28,6 +29,7 @@ file <- read_csv("../raw/file_info.csv") %>%
 device <- read_csv("../raw/device_info.csv") %>% 
     mutate(date = lubridate::mdy_hms(date)) %>% 
     mutate(day = lubridate::as_date(date)) %>% 
+    mutate(weekday = lubridate::wday(day, label = TRUE, abbr = FALSE)) %>% 
     mutate(time = hms::as.hms(date)) %>% 
     mutate(hour = lubridate::hour(time)) %>% 
     mutate(before_5 = 
@@ -38,18 +40,22 @@ device <- read_csv("../raw/device_info.csv") %>%
 logon <- read_csv("../raw/logon_info.csv") %>% 
     mutate(date = lubridate::mdy_hms(date)) %>% 
     mutate(day = lubridate::as_date(date)) %>% 
+    mutate(weekday = lubridate::wday(day, label = TRUE, abbr = FALSE)) %>% 
     mutate(time = hms::as.hms(date)) %>% 
     mutate(hour = lubridate::hour(time))
 http <- read_csv("../data/http_small.csv") %>%
     mutate(date = lubridate::mdy_hms(date)) %>%
     mutate(day = lubridate::as_date(date)) %>%
+    mutate(weekday = lubridate::wday(day, label = TRUE, abbr = FALSE)) %>% 
     mutate(time = hms::as.hms(date)) %>%
     mutate(hour = lubridate::hour(time))
 email <- read_csv("../data/email_small.csv") %>%
     mutate(date = lubridate::mdy_hms(date)) %>%
     mutate(day = lubridate::as_date(date)) %>%
+    mutate(weekday = lubridate::wday(day, label = TRUE, abbr = FALSE)) %>% 
     mutate(time = hms::as.hms(date)) %>%
     mutate(hour = lubridate::hour(time))
+employee_summary <- read_csv("../data/employee_summary.csv")
 
 key <- file %>%
     filter(keylogger == TRUE)
@@ -119,6 +125,8 @@ usr_email <- email %>%
     filter(user == usr)
 usr_logon <- logon %>%
     filter(user == usr)
+usr_info <- original %>% 
+    filter(user_id == usr)
 
 unique(usr_email$from)
 work_email <- "Cathleen.Samantha.Craig@dtaa.com"
@@ -143,6 +151,115 @@ logon_after <- logon %>%
 # we see at least one other bad user, JTM0223 logon to this machine after
 # we check all other users if they get on this machine after installation
 # date
+
+# want to look at web traffic between usb connections
+usr_dayof_web <- http %>%
+    filter(user == usr) %>% 
+    filter(day == when$day)
+usr_dayof_email <- email %>%
+    filter(user == usr) %>% 
+    filter(day == when$day)
+# want to check previous day too
+usr_daybefore_web <- http %>%
+    filter(user == usr) %>% 
+    filter(day == as_date("2010-06-09"))
+# if you look day of, these are repeated keywords in her nasty emails
+# to the supervisor, worth searching in general through all user activity
+# and then we can get a bigger picture
+keywords <- c("after-hours", "weekends", "irreplaceable", "appreciated",
+              "graditude")
+flags <- rep(FALSE, nrow(usr_email))
+for (i in 1:nrow(usr_email)) {
+    this_email <- usr_email[i, ]
+    for (j in 1:length(keywords)) {
+        this_word <- keywords[j]
+        if (str_detect(this_email$content, this_word)) {
+            flags[i] <- TRUE
+            next
+        }
+    }
+}
+flagged_emails <- usr_email[flags, ]
+# suffer picks up to many false positives
+# look at emails from supervisor to get a better picture
+supervisor_emails <- email %>% 
+    filter(from == "Frances.Alisa.Wiggins@dtaa.com") %>% 
+    filter(day >= as_date("2010-06-09") & day <= as_date("2010-06-14"))
+# supervisor has couple replies to user with keywords vacation, appreciated
+# hard job, talk over lunch
+
+# look at infecte pc traffic
+pc_after_malware_users <- logon %>%
+    filter(pc == pc_after_malware) %>% 
+    select(user) %>% 
+    unique()
+pc_after_malware_users <- pc_after_malware_users$user
+# check these users out for roles, etc
+pc_after_malware_users <- employee_summary %>% 
+    filter(employee_id %in% pc_after_malware_users)
+
+
+# second user
+usr <- "GTD0219" 
+usr_info <- employee_summary %>% 
+    filter(employee_id == usr)
+sup <- usr_info$supervisor_email
+when <- key %>% 
+    filter(user == usr)
+usr_file <- file %>%
+    filter(user == usr)
+usr_device <- device %>%
+    filter(user == usr)
+usr_web <- http %>% 
+    filter(user == usr)
+usr_email <- email %>% 
+    filter(user == usr)
+usr_logon <- logon %>%
+    filter(user == usr)
+usr_dayof_web <- http %>%
+    filter(user == usr) %>% 
+    filter(day == when$day)
+usr_dayof_email <- email %>%
+    filter(user == usr) %>% 
+    filter(day == when$day)
+usr_dayof_logon <- logon %>%
+    filter(user == usr) %>% 
+    filter(day == when$day)
+sup_dayof_email <- email %>%
+    filter(from == sup) %>% 
+    filter(day == when$day)
+
+
+
+
+
+
+
+
+
+
+
+# look at some keywords that the users send their supervisors and
+# same for supervisors and their constituents
+key_words <- email %>% 
+    mutate(word = str_detect(content, "holidays | weekends")) %>% 
+    filter(word == TRUE)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# stuff for a function to process this information later ----
 bad_users_logon <- rep(FALSE, length(bad_users))
 bad_users_connects <- rep(0, length(bad_users))
 for (i in 1:length(bad_users)) {
