@@ -16,8 +16,13 @@ raw <- usb_distribution[, -c(1, 2, 4)]
 
 trc <- trainControl(method = "cv", number = 10)
 logfit <- train(factor(attrition) ~ ., data = raw, trControl = trc, method = "glm",
-                family = binomial(), na.action = na.exclude) 
-paste0("Overall error rate: ", 1 - logfit$results[, 2])
+                family = binomial())  
+paste0("LASSO overall error rate: ", 1 - logfit$results[, 2])
+logfit <- train(factor(attrition) ~ ., data = raw, trControl = trc, method = "rpart")
+paste0("CART overall error rate: ", 1 - logfit$results[1, 2])
+logfit <- train(factor(attrition) ~ ., data = raw, trControl = trc, method = "rf",
+                allowParallel = TRUE)
+paste0("Random Forest overall error rate: ", 1 - logfit$results[1, 2])
 
 ```
 
@@ -30,7 +35,13 @@ raw <- web_distribution[, -c(1,2,8)]
 rc <- trainControl(method = "cv", number = 10)
 logfit <- train(factor(attrition) ~ ., data = raw, trControl = trc, method = "glm",
                 family = binomial(), na.action = na.exclude)  
-paste0("Overall error rate: ", 1 - logfit$results[, 2])
+paste0("LASSO overall error rate: ", 1 - logfit$results[, 2])
+logfit <- train(factor(attrition) ~ ., data = raw, trControl = trc, method = "rpart")
+paste0("CART overall error rate: ", 1 - logfit$results[1, 2])
+logfit <- train(factor(attrition) ~ ., data = raw, trControl = trc, method = "rf",
+                allowParallel = TRUE)
+paste0("Random Forest overall error rate: ", 1 - logfit$results[1, 2])
+
 
 ```
 
@@ -43,7 +54,13 @@ raw <- logon_distribution[, -c(1, 2, 4)]
 rc <- trainControl(method = "cv", number = 10)
 logfit <- train(factor(attrition) ~ ., data = raw, trControl = trc, method = "glm",
                 family = binomial(), na.action = na.exclude)  
-paste0("Overall error rate: ", 1 - logfit$results[, 2])
+paste0("LASSO overall error rate: ", 1 - logfit$results[, 2])
+logfit <- train(factor(attrition) ~ ., data = raw, trControl = trc, method = "rpart")
+paste0("CART overall error rate: ", 1 - logfit$results[1, 2])
+logfit <- train(factor(attrition) ~ ., data = raw, trControl = trc, method = "rf",
+                allowParallel = TRUE)
+paste0("Random Forsest overall error rate: ", 1 - logfit$results[1, 2])
+
 
 ```
 
