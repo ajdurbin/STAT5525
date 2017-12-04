@@ -131,7 +131,7 @@ results <- unpack(results)
 write_csv(results, "../data/fits.csv")
 
 # figures ----
-
+results <- read_csv("../data/fits.csv")
 logon_fits <- results[, 2:4]
 colnames(logon_fits) <- c("Logistic LASSO", "CART", "Random Forest")
 logon_fits <- stack(logon_fits)
@@ -142,6 +142,7 @@ l <- ggplot(data = logon_fits, mapping = aes(x = ind, y = values)) +
     ylim(0, 0.10) +
     ggtitle("Error Rates For Logon/Logoff Distribution Model Fits") +
     coord_flip()
+ggsave("logon_boxplot.png")
 
 
 usb_fits <- results[, 5:7]
@@ -154,7 +155,7 @@ u <- ggplot(data = usb_fits, mapping = aes(x = ind, y = values)) +
     ylim(0, 0.10) +
     ggtitle("Error Rates For USB Distribution Model Fits") +
     coord_flip()
-
+ggsave("usb_boxplot.png")
 
 web_fits <- results[, 8:10]
 colnames(web_fits) <- c("Logistic LASSO", "CART", "Random Forest")
@@ -166,6 +167,7 @@ w <- ggplot(data = web_fits, mapping = aes(x = ind, y = values)) +
     ylim(0, 0.10) +
     ggtitle("Error Rates For HTTP Distribution Model Fits") +
     coord_flip()
+ggsave("web_boxplot.png")
 
 grid.arrange(l, u, w)
 
@@ -180,6 +182,7 @@ l <- ggplot(data = results) +
     xlab("Attrition Dates") +
     ggtitle("Error Rates Of Logon Distribution Model Fits\n
             Through Employee Attrition Dates")
+ggsave("logon_time.png")
 u <- ggplot(data = results) +
     geom_line(mapping = aes(x = date, y = usb_lasso, color = "LASSO")) +
     geom_line(mapping = aes(x = date, y = usb_cart, color = "CART")) +
@@ -190,6 +193,7 @@ u <- ggplot(data = results) +
     xlab("Attrition Dates") +
     ggtitle("Error Rates Of USB Distribution Model Fits\n
             Through Employee Attrition Dates")
+ggsave("usb_time.png")
 w <- ggplot(data = results) +
     geom_line(mapping = aes(x = date, y = web_lasso, color = "LASSO")) +
     geom_line(mapping = aes(x = date, y = web_cart, color = "CART")) +
@@ -200,5 +204,6 @@ w <- ggplot(data = results) +
     xlab("Attrition Dates") +
     ggtitle("Error Rates Of HTTP Distribution Model Fits\n
             Through Employee Attrition Dates")
+ggsave("web_time.png")
 
 grid.arrange(l, u, w)

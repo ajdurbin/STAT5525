@@ -45,6 +45,7 @@ ggplot() +
     scale_x_date(date_breaks='2 weeks', date_minor_breaks = "1 weeks") +
     theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
     ggtitle(paste0(usr, " Web Traffic"))
+ggsave("web.png")
     
 
 # logon ----
@@ -83,6 +84,7 @@ ggplot() +
       scale_x_date(date_breaks='2 weeks', date_minor_breaks = "1 weeks") +
       theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
       ggtitle(paste0(usr, " Logon/Logoffs"))
+ggsave("logon.png")
 
 
 # usb ----
@@ -121,3 +123,4 @@ ggplot() +
     scale_x_date(date_breaks='2 weeks', date_minor_breaks = "1 weeks") +
     theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
     ggtitle(paste0(usr, " USB Connects/Disconnects"))
+ggsave("usb.png")
