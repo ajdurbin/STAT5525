@@ -1,0 +1,18 @@
+we looked at the file information and looked for those with negative sentiment.
+we searched for malicious keywords such as malware/virus/etc. The IT
+administrators had a higher attrition rate than other users, over 50%. We first
+searched for emails with extremely negative sentiment and looked closer at
+these messages and from employees to superisors and visa versa. This way we
+could almost detect some disciplanary actions or things of that nature. We
+initially found several IT administrators sending very negative emails to
+supervisors complaining about working after-hours or holidays. Most happen
+Thursday mornings. There are usually two emails from the employee to the
+supervisor and two replies from the supervisor. Later near end of business the
+IT admin downloads a keylogger file. After the supervisor leaves, the it admin
+logs onto the supervisor machine a little after business hours presumably to
+extract the keylogging exe file onto the supervisor machine. There were only
+two cases of the it admins extracting the keylogging to machines other than
+supervisors. The next day the sysadmins have a regular working day before
+logging onto the supervisor machines one more time, probably to extract the
+keylogs before leaving. Each sysadmin appears to have a normal working day on
+their last day. 7/8 have a single supervisor that they are performing this on. 

@@ -1,0 +1,57 @@
+make sure to add computational considerations to subset of each seciton of
+paper as needed
+interesting how in ACME there are not high usage of people working nights or
+holidays but it's extremely common in DTT
+-----
+
+comprehensive discussion of how computational challenges were met and overcome.
+Discussion of how additional computation resources benefitted the project.
+-----
+
+most important computational issues were initial data import and simple
+processing. Because the data sets were too large for laptop usage, we used the
+ARC machines for working. Datasets too large for local processing so we split
+the datasets up for local processing into chunks by end date to test scripts on
+before running. 
+
+be sure to mention that since we fit the 60+ models for the ACME dataset that
+neural networks were not considered for computational reasons and
+interpretability reasons. text processing was most computationally intensive
+issue because the email/http text were so large, almost impossible to run text
+processing on the http dataset so we only did a portion of it. text processing
+most computational intesnive and computing the sentiment scores by user was
+done in parallel. Something something running scripts in parallel was especialy
+useful for the large scale processing. 
+
+Process of making web gifs was very intensive since we amde these videos for
+every single user, this was also a cheap parallelization argument and
+leveraging ARCs resources drastically reduced computation time. 
+
+email networks almost impossible without grouping people within business units
+roles etc and then restricting ourselves to those email networks. with 1000
+users but have multiple email addresses and there are several users outside of
+company
+
+people working on computers at same time had to double time because we had to
+move both directions like hes working iwth her and also the other direction
+shes working with him
+
+mention that they file signatures were eiher scrambled or just misinformation
+since they didn't match the actual file signatures
+
+-----
+assessment of strengths and weaknesss of the approaches to modeling and how
+choices were impacted by computation
+------
+
+logistic lasso are cheap to train/tune
+maybe that lasso was not consistent in most important features as the data
+moved on so this was a definite disadvantage of our model fits, also struggles
+with correlations and this may have changed overtime in our models that were
+fit
+cart trees cheapt to train/tune
+random forest easily run in parallel
+neural networks too long to train and couldn't easily be run in parallel
+for knn, we it was a relatively cheap operation such that we fit reran knn
+multiple times before making a scree plot since knn depends on initial values
+the lda/sentiment analysis takes too long to work
