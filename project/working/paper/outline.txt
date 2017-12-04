@@ -38,6 +38,7 @@ really. These observations were flagged so we did not lose this 'missing
 information'
 
 ## variable creation
+
     For the logon datasets, it was most natural to keep track of a users
 primary machine, that is the one that they logon the most too throughout these
 datasets. We also wanted to track how many different machines a user was logged
@@ -140,6 +141,8 @@ not bias our models. These models were fit with 10 fold cross validation at
 each iteration. Here are some plots of results. We see that most often the
 CART/random Forest have similar results which is to be expected. they also
 perform better than the logitic lasso in the mjaority of cases.
+    
+## model justification
     
      
     

@@ -39,7 +39,9 @@ fit_models <- function(end_date){
     
     # logon data and fit model
     logon_distribution <- read_csv(paste0("../outputs/", end_date, 
-                                          "/logon_distribution.csv"))
+                                          "/logon_distribution.csv")) %>% 
+        dplyr::rename(quick_connects_lt_1_min_logon = quick_connects_lt_1_min) %>% 
+        dplyr::rename(quick_connects_lt_5_min_logon = quick_connects_lt_5_min)
     logon_distribution[is.na(logon_distribution)] <- 0
     logon_distribution[is.nan.data.frame(logon_distribution)] <- 0
     logon_distribution[is.inf.data.frame(logon_distribution)] <- 0
@@ -61,7 +63,9 @@ fit_models <- function(end_date){
     usb_distribution <- read_csv(paste0("../outputs/", end_date, 
                                         "/usb_distribution.csv")) %>% 
         mutate(bad_connects_pcs = 
-                   ifelse(is.na(bad_connects_pcs), "", bad_connects_pcs))
+                   ifelse(is.na(bad_connects_pcs), "", bad_connects_pcs)) %>% 
+        dplyr::rename(quick_connects_lt_1_min_usb = quick_connects_lt_1_min) %>% 
+        dplyr::rename(quick_connects_lt_5_min_usb = quick_connects_lt_5_min) 
     usb_distribution[is.na(usb_distribution)] <- 0
     usb_distribution[is.nan.data.frame(usb_distribution)] <- 0
     usb_distribution[is.inf.data.frame(usb_distribution)] <- 0
@@ -98,6 +102,8 @@ fit_models <- function(end_date){
                     allowParallel = TRUE)
     # paste0("Random Forest overall error rate: ", 1 - logfit$results[1, 2])
     wr <- 1 - logfit$results[1, 2]
+    
+    
     
     # format and return
     row <- data.frame(date = end_date,
