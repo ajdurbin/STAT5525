@@ -23,7 +23,8 @@ text <- file %>%
     tidytext::unnest_tokens(word, content) %>% 
     anti_join(stop_words)
 text_counts <- text %>%
-    inner_join(get_sentiments(lexicon = "bing")) %>% 
+    inner_join(get_sentiments(lexicon = "bing"))
+text_counts <- text_counts %>% 
     count(word, sentiment, sort = TRUE) %>% 
     ungroup()
 # figure of words that appear most in positive/negative sentiment
@@ -50,7 +51,7 @@ text_counts <- text %>%
 test <- file[1, ] %>%
     tidytext::unnest_tokens(word, content) %>% 
     anti_join(stop_words)
-scores <- test %>%
+scores <- text_counts %>%
     inner_join(get_sentiments("bing")) %>%
     count(sentiment) %>% 
     spread(sentiment, n, fill = 0) %>%
@@ -103,3 +104,45 @@ clusterExport(cl = cl, varlist = ls())
 result <- parLapply(cl = cl, indices, function(g) score_function(i = g))
 stopCluster(cl = cl)
 result <- unpack(result)
+
+
+# using tidytext tutorial found here:
+# http://tidytextmining.com/sentiment.html
+file <- read_csv("../raw/file_info.csv") %>% 
+    mutate(date = lubridate::mdy_hms(date)) %>% 
+    mutate(day = lubridate::as_date(date)) %>% 
+    mutate(weekday = lubridate::wday(day, label = TRUE, abbr = FALSE)) %>% 
+    mutate(time = hms::as.hms(date)) %>% 
+    mutate(hour = lubridate::hour(time)) %>% 
+    mutate(extension = str_extract(filename, "[^.]*$")) %>% 
+    mutate(after_business_hours = hour > 17 | hour < 8) %>% 
+    select(-id) %>% 
+    mutate(content = sub(".*? (.+)", "\\1", content))
+text <- file %>%
+    select(date, filename, content) %>% 
+    tidytext::unnest_tokens(word, content) %>% 
+    anti_join(stop_words)
+text_counts <- text %>%
+    inner_join(get_sentiments("bing")) %>% 
+    count(word, sentiment, sort = TRUE)
+# figure of words that appear most in positive/negative sentiment
+text_counts %>%
+    group_by(sentiment) %>%
+    top_n(10) %>%
+    ungroup() %>%
+    mutate(word = reorder(word, n)) %>%
+    ggplot(aes(word, n, fill = sentiment)) +
+    geom_col(show.legend = FALSE) +
+    facet_wrap(~sentiment, scales = "free_y") +
+    labs(y = "Contribution to sentiment",
+         x = NULL) +
+    coord_flip()
+ggsave("text_counts.png")
+# positive/negative word cloud in one
+text_counts <- text %>%
+    inner_join(get_sentiments("bing")) %>%
+    count(word, sentiment, sort = TRUE) %>%
+    acast(word ~ sentiment, value.var = "n", fill = 0) %>%
+    comparison.cloud(colors = c("#F8766D", "#00BFC4"),
+                     max.words = 100)
+ggsave("word_cloud.png")
