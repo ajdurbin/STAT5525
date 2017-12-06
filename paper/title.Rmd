@@ -1,0 +1,15 @@
+---
+title: "STAT5525 Final Project"
+author: "Group 1003"
+date: "`r Sys.Date()`"
+output: pdf_document
+fontsize: 12pt
+geometry: margin=1in
+abstract: "This paper discusses the methods and results of various statistical learning techniques applied to unstructured data. We discuss our feature development and model performance in a business analytics setting. Also included are computational challenges and compromises in our analyses. We conclude with interpretatations and usefulness of results."
+---
+    
+    ```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+\thispagestyle{empty}
