@@ -1,0 +1,13 @@
+Research Questions
+
+- Can we identify those who go to lunch together?
+- Look at web traffic and cross list with employment dates
+- look at device info and employment dates to see if this correlates with stealing data
+- create new attrition variable. we have approximate start and end dates, we can couple this with their web traffic, logon/logoff traffic, device traffic to see if they were fired. additionally we can say if they were promoted or not also.
+- crosslist user job with what we should expect, will a janitor have a usb drive? probably not. 
+- can filter attrition and promotion by job titles too
+- connect shopping data with holidays
+- leaving work early, ie, not logging on after early afternoon
+- predict employees to be promoted based on weekend working, late working, low irrelevant web traffic, infrequent logon/logoffs
+- find pornagraphy in web traffic
+- employee data theft suspicions, connections during odd hours with usb traffic, crosslist with their web traffic say using dropbox or google drive

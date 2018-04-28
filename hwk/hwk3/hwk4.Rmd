@@ -1,0 +1,346 @@
+---
+title: "Homework 4"
+subtitle: "Data Analytics"
+author: "Alexander Durbin"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+._ <- c("tidyverse", "mvtnorm", "EMCluster", "mclust", "subspace",
+        "orclus", "HDclassif")
+lapply(._, library, character.only = TRUE)
+```
+
+# TODO
+- problem 5 variable selection and classification
+
+# Problem 1
+
+The underlying model of *k*-means is given by model (1) with $\Sigma_k=\sigma^2I$ for all $k$. That is, *k*-means does not take into account the variance within clusters when it is grouping observations. It also assumes that $\sigma^2$ is small. This procedure is implimented in the *EM* algorithm.
+
+To show that *k*-means and *EM* are equivalent under $\Sigma=\sigma^2I$ for all *k* as $\sigma^2 \rightarrow 0$, it suffices to show that their objective functions are equivalent during their respective optimization steps.
+
+*k*-means minimizes the objective function \[O_{km}=\sum_{k=1}^K \sum_{i=1}^n \gamma_{i,k} ||x_i-\mu_k||^2,\] where $\gamma_{i,k}$ is the indicator function of $x_i$ belonging to cluster *k*.
+
+*EM* algorithm maximizes the objective function  
+
+\begin{align*}
+O_{EM}&=\sum_{k=1}^K \sum_{i=1}^n E[\gamma_{i,k}](log\pi_{i,k} + logN(x|\mu_k,\Sigma_k)) \\
+&=Nlog\frac{1}{K} - \frac{1}{\sigma^2}\sum_{k=1}^K \sum_{i=1}^nE[\gamma_{i,k}]||x_i-\mu_k||^2-N\frac{p}{2}log(2\pi\sigma^2)\\
+&=-\frac{1}{\sigma^2}\sum_{k=1}^K\sum_{i=1}^nE[\gamma_{i,k}]||x_i-\mu_k||^2+C,
+\end{align*}
+
+where we have collected constants. Multiplying by $\sigma^2$, we have
+
+\begin{align*}
+O_{EM} &\propto -\sum_{k=1}^K\sum_{i=1}^nE[\gamma_{i,k}]||x_i-\mu_k||^2+\sigma^2C\\
+&= -\sum_{k=1}^K\sum_{i=1}^nE[\gamma_{i,k}]||x_i-\mu_k||^2\\
+&= -O_{km}
+\end{align*}
+
+as $\sigma^2 \rightarrow 0$ and maximization. So that under constant variance-covariance matrices and small $\sigma^2$, minimization of within cluster spread in *k*-means is equivalent to the maximization step in *EM* algorithm up to proportionality. Here $E[\gamma_{i,k}] = Pr(\gamma_{i,k}=1|x)=\hat{\pi}_{i,k}$, it's derivation is more involved than those in Problem 3.
+
+# Problem 2
+
+```{r, warning=FALSE}
+
+raw <- read.table("ClusterSet1.txt")
+
+best_km_fit <- list("1" <- NULL)
+for(i in 2:30){
+  fit <- kmeans(raw, centers = i)
+  for(j in 1:1000){
+    tmp <- kmeans(raw, centers = i)
+    if(tmp$tot.withinss < fit$tot.withinss){
+      fit <- tmp
+    }
+  }
+  tmp <- as.character(i)
+  best_km_fit[[tmp]] <- fit
+}
+
+sto <- rep(0, 30)
+for(i in 2:length(best_km_fit)){
+  tmp <- best_km_fit[[i]]
+  sto[i] <- tmp$tot.withinss
+}
+
+ggplot() +
+  geom_jitter(mapping = aes(x = 2:30, y = sto[2:length(sto)])) +
+  ggtitle("Scree Plot For k-Means Clustering") +
+  xlab("Number Of Clusters") +
+  ylab("Total Within Clusters Sum Of Squares") +
+  ylim(min(sto), max(sto))
+
+```
+
+In order to make a "reliable" Scree plot, we iterated over 29 possible values of *k* and drew 1000 realizations of *k*-means for each *k*. Our "best" realizations were those with smallest total within cluster sum of squares. This was necessary to because `R`'s *k*-means is extremely sensitive to the initial centroids and often performs poorly. From the plot, we see marginal decreases in variability for $k>9$.
+
+The following code gives the centroids for *k*-Means for $k=9$ of our "best" realization.
+
+```{r, echo = TRUE}
+
+best_km_fit[[9]]$centers
+
+```
+
+# Problem 3
+
+The likelihood for the Gaussian mixture model is given by
+\begin{align*}
+\mathcal{L}(\mu_j, \Sigma_j, \pi_j | \underline{x})=\prod_{i=1}^n \sum_{j=1}^k \pi_j \mathcal{N}(x_i | \mu_j, \Sigma_j).
+\end{align*}
+With log-likelihood 
+\begin{align*}
+log \mathcal{L}(\mu_j, \Sigma_j, \pi_j | \underline{x}) = \sum_{i=1}^n log \sum_{j=1}^k \pi_j \mathcal{N}(x_i | \mu_j, \Sigma_j).
+\end{align*}
+
+## Part a
+
+\begin{align*}
+\frac{\partial log \mathcal{L}(\mu_j, \Sigma_j, \pi_j | \underline{x})}{\partial \mu_j} &= \sum_{i=1}^{n} \frac{\partial}{\partial \mu_j} log \sum_{j=1}^{k} \pi_j \mathcal{N}(x_i | \mu_j, \Sigma_j)\\
+&= \sum_{i=1}^{n} \frac{1}{\sum_{j=1}^{k} \pi_j \mathcal{N}(x_i | \mu_j, \Sigma_j)} \frac{\partial}{\partial \mu_j}  \pi_j \mathcal{N}(x_i | \mu_j, \Sigma_j) \\
+&=  \sum_{i=1}^{n} \frac{1}{\sum_{j=1}^{k} \pi_j \mathcal{N}(x_i | \mu_j, \Sigma_j)} (x_i-\mu_j)^T \Sigma^{-1}_j   \pi_j \mathcal{N}(x_i | \mu_j, \Sigma_j) \\
+&=  \sum_{i=1}^{n} \pi_{i,j} (x_i-\mu_j)^T \Sigma^{-1}_j
+\end{align*}
+
+\begin{align*}
+\frac{\partial log \mathcal{L}(\mu_j, \Sigma_j, \pi_j | \underline{x})}{\partial \mu_j}=0 &\implies  \sum_{i=1}^{n} \pi_{i,j} (x_i-\mu_j)^T \Sigma^{-1}_j=0\\
+&\implies  \sum_{i=1}^{n} \pi_{i,j}x_i=  \sum_{i=1}^{n} \pi_{i,j}\mu_j \\
+&\implies \hat{\mu}_{j}=\frac{ \sum_{i=1}^{n} \pi_{i,j}x_i}{\sum_{i=1}^{n} \pi_{i,j}}
+\end{align*}
+
+## Part b
+
+\begin{align*}
+\frac{\partial log \mathcal{L}(\mu_j, \Sigma_j, \pi_j | \underline{x})}{\partial \Sigma^{-1}_j} &=  \sum_{i=1}^{n} \frac{\partial}{\partial  \Sigma^{-1}_j} log \sum_{j=1}^{k} \pi_j \mathcal{N}(x_i | \mu_j, \Sigma_j) \\
+&= \sum_{i=1}^{n} \frac{1}{\sum_{j=1}^{k} \pi_j \mathcal{N}(x_i | \mu_j, \Sigma_j)} \frac{\partial}{\partial \Sigma^{-1}_j}  \pi_j \mathcal{N}(x_i | \mu_j, \Sigma_j) \\
+&= \sum_{i=1}^{n} \frac{1}{\sum_{j=1}^{k} \pi_j \mathcal{N}(x_i | \mu_j, \Sigma_j)} [-\frac{1}{2}(x_i-\mu_j)(x_i-\mu_j)^T+\frac{1}{2}\Sigma_j]   \pi_j \mathcal{N}(x_i | \mu_j, \Sigma_j) \\
+&= \sum_{i=1}^{n} \pi_{i,j}  [-\frac{1}{2}(x_i-\mu_j)(x_i-\mu_j)^T+\frac{1}{2}\Sigma_j]
+\end{align*}
+
+\begin{align*}
+\frac{\partial log \mathcal{L}(\mu_j, \Sigma_j, \pi_j | \underline{x})}{\partial \Sigma^{-1}_j}=0 &\implies   \sum_{i=1}^{n} \pi_{i,j}  [-\frac{1}{2}(x_i-\mu_j)(x_i-\mu_j)^T+\frac{1}{2}\Sigma_j]=0\\
+&\implies \hat{\Sigma}_j=\frac{\sum_{i=1}^{n} \pi_{i,j} (x_i-\mu_j)(x_i-\mu_j)^T}{\sum_{i=1}^{n} \pi_{i,j}}
+\end{align*}
+
+## Part c
+
+Our implimentation of the EM algorithm is the following code. 
+
+```{r}
+
+E.step <- function(X, phi, N) {
+  
+  h <-
+    with(phi, do.call(cbind,
+                      lapply(1:N, function(i)
+                        dmvnorm(X, mu[[i]], sig[[i]]))))
+  
+  return(h/rowSums(h))
+  
+}
+
+M.step <- function(X, h, N) {
+  
+  covs <- lapply(1:N, function(i) cov.wt(X, h[,i]))
+  mu <- lapply(covs, "[[", "center")
+  sig <- lapply(covs, "[[", "cov")
+  alpha <- colMeans(h)
+  
+  return(list(mu = mu, sig = sig, alpha = alpha))
+  
+}
+
+log.like <- function(X, phi, N) {
+  
+  probs <- 
+    with(phi, do.call(cbind,
+                      lapply(1:N, function(i)
+                        alpha[i] * dmvnorm(X, mu[[i]], sig[[i]]))))
+  
+  return(sum(log(rowSums(probs))))
+  
+}
+
+run.em <- function(X, N, max.iter = 30) {
+  
+  covs <- replicate(N, list(cov.wt(X[sample(nrow(X), 30),])))
+  mu <- lapply(covs, "[[", "center")
+  sig <- lapply(covs, "[[", "cov")
+  alpha <- rep(1 / N, N)
+  phi <<- list(mu = mu, sig = sig, alpha = alpha)
+  
+  for(i in 1:max.iter) {
+    
+    oldphi <- phi
+    h <<- E.step(X, phi, N)
+    phi <<- M.step(X, h, N)
+    
+    if((log.like(X, phi, N) - log.like(X, oldphi, N)) < 0.01){
+        break
+    }
+    
+  }
+  
+  return(phi)
+  
+}
+
+```
+
+And the following code gives the results for six clusters.
+
+```{r, echo=TRUE}
+
+x <- run.em(X = raw, N = 9, max.iter = 100)$mu
+em_means <- x[[1]]
+if(length(x) > 1){
+  for(i in 2:length(x)){
+    em_means <- rbind(em_means, x[[i]])
+  }
+}
+em_means
+best_km_fit[[9]]$centers
+
+```
+
+We see that the results are drastically different.
+
+To better compare the results, we use `R` packages that assign the class labels.
+
+```{r}
+
+emobj <- simple.init(raw, nclass = 9)
+emobj <- shortemcluster(raw, emobj)
+ret <- emcluster(raw, emobj, assign.class = TRUE)
+ret$Mu
+
+```
+
+We compare the results of each clustering technique using Adjusted Rand Index.
+
+```{r}
+
+adjustedRandIndex(ret$class, best_km_fit[[9]]$cluster)
+
+```
+
+Even though the centroids are different between the two techniques, the methods do agree in the majority of their class labelling.
+
+## Problem 4
+
+The following plots are dendograms by link function.
+
+```{r}
+
+hcs <- hclust(dist(raw), method = "single")
+hcc <- hclust(dist(raw), method = "complete")
+hca <- hclust(dist(raw), method = "average")
+plot(hcs, main = "single linkage")
+rect.hclust(hcs, k = 9, border = "red")
+cor(cophenetic(hcs), dist(raw))
+plot(hcc, main = "complete linkage")
+rect.hclust(hcc, k = 9, border = "red")
+cor(cophenetic(hcc), dist(raw))
+plot(hca, main = "average linkage")
+rect.hclust(hca, k = 9, border = "red")
+cor(cophenetic(hca), dist(raw))
+
+```
+
+We choose *average linkage* because it provides the most clear signal and conclude that there are 9 clusters in this dataset, similar to our *k*-means Scree plot. Additionally, it provides the largest correlation between the Cophenetic distance measure and link function distance measure among all three link functions attempted.
+
+# Problem 5
+
+```{r}
+
+raw <- read.table("ClusterSet2.txt")
+
+```
+
+With 50 dimensions, the Curse of Dimensionality is an issue and *k*-means will not be able to capture the overall variability in the observations. Similar to Problem 2, we simulate *k*-means 1000 times for $ 2 \le k \le 100$ and store the smallest total within sum of squares for each *k*. Our Scree plot shows a sharp bend near 12-15 clusters. Thus, we need to consider alternative methods for finding the total number of clusters in this data.
+
+We can also consider subspace clustering. Here, we partition the space such that for a given subset of the dimensions, there is a cluster of observations. However, there is still an issue with this technique in high dimensions where observations are "far" away from eachother. We consider two different algorithms here for computing the number of clusters using subspace clustering. 
+
+```{r}
+
+FIRES(raw)
+SubClu(raw)
+
+```
+
+
+Similar to subspace clustering, we can also use projection clustering. Here, the clusters can be in different subspaces. Again, we consider two different algorithms for projected clustering.
+
+```{r}
+
+P3C(raw)
+ProClus(raw)
+
+```
+
+So we see that `P3C` and `FIRES` algorithms both agree that there are 44 clusters using either subspace or projected clustering. Both `ProClus` and `Subclus` conclude there are 4 clusters. This is because each of these algorithms is extremely similar to *k*-means in that we must specify a number of clusters ahead of time, but also the average number of dimensions that a cluster is contained in. It is very difficult to approximate these values in high dimensional space, so we find them less useful than `P3C` and `FIRES` algorithms.
+
+We also fit the `CLIQUE` algorithm for subspace clustering.
+
+```{r}
+
+CLIQUE(raw, xi = 30, tau = 0.2)
+
+```
+
+Here, the tuning parameter $x_i$ is the number of intervals each dimensions is divided into. From here, we keep the intervals such that the density is greater than $\tau$. We then intersect these intervals in multiple dimensions to create clusters. Adjacent clusters become a joint cluster after all intersections are performed. Here we conclude that there are 29 clusters. However, we need a metric for tuning $x_i$. 
+
+Because we have highly dimensional data, we can also consider dimensionality reduction before clustering. Here we use Principal Components before and select the *n* principal components that explain the majority fo the variation using a Scree plot. From here, we then redo our hierarchical clustering and *k*-means simulation to get the number of clusters in our data. 
+
+```{r}
+
+pca <- princomp(raw)
+vars <- pca$sdev^2
+vars <- vars / sum(vars)
+ggplot() + 
+    geom_jitter(mapping = aes(x = 1:length(vars), y = vars)) +
+    xlab("Principal Component") +
+    ylab("Variation Explained") +
+    ggtitle("Proportion of Total Variability\nExplained By Principal Components")
+
+```
+
+We see that the majority of the total variability is best explained by the first 11 principal components. We then select those components and redo our *k*-means simulation from Problem 2 to get the total number of clusters in this reduced dimensional data. 
+
+```{r, warning=FALSE}
+
+scores <- pca$scores[, 1:11]
+
+best_km_fit <- list("1" <- NULL)
+for(i in 2:30){
+  fit <- kmeans(scores, centers = i)
+  for(j in 1:1000){
+    tmp <- kmeans(scores, centers = i)
+    if(tmp$tot.withinss < fit$tot.withinss){
+      fit <- tmp
+    }
+  }
+  tmp <- as.character(i)
+  best_km_fit[[tmp]] <- fit
+}
+
+sto <- rep(0, 30)
+for(i in 2:30){
+  tmp <- best_km_fit[[i]]
+  sto[i] <- tmp$tot.withinss
+}
+
+ggplot() +
+  geom_jitter(mapping = aes(x = 2:30, y = sto[2:length(sto)])) +
+  ggtitle("Scree Plot For k-Means Clustering\nOn First 1O Principal Components") +
+  xlab("Number Of Clusters") +
+  ylab("Total Within Clusters Sum Of Squares") +
+  ylim(min(sto), max(sto))
+
+```
+
+We thus conclude that there are 12 clusters here. 

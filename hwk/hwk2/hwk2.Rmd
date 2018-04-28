@@ -1,0 +1,280 @@
+---
+title: "Homework 2"
+subtitle: "STAT5525: Data Analytics"
+author: "Alexander Durbin"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, cache = FALSE)
+```
+
+```{r, include=FALSE}
+# for logistic regression and cross validation
+library(caret)
+# for logistic lasso
+library(glmnet)
+# for classification tree
+library(rpart)
+```
+
+# Part 1
+## Part a
+
+The CART algorithm recursively partions the space such that the bins contain mostly homogenous observations. When partitioning the space with respect to a feature, say $x_{j^*}$, we look for breaks in the data $x_{j^*} < \gamma$ such that the variance is minimimal. So to show CART is invariant to standardizing features, we need to show that the order or the data is preserved after transformation. Indeed,
+
+\[ x_{s,j^*} \le x_{t, j^*} \implies \frac{x_{s,j^*} - \bar{x}_{.,j^*}}{\hat{\sigma}^2_{., j^*}} \le \frac{x_{t, j^*}- \bar{x}_{.,j^*}}{\hat{\sigma}^2_{., j^*}}. \]
+
+So that the ordering is prevered after transformation. Therefore CART is invariant to standardization.
+
+## Part b
+
+Let $A$ be the invertible matrix that standardizes the data in $X$. Also let $Z=A\theta$ and $\beta = A\theta$. We want to show that our objective functions are not equivalent.
+
+The LASSO solution is
+\[ \hat{\beta} = \min_\beta ||Y-X\beta||_2 + \lambda^T|\beta|.\]
+
+Our standardized solution is
+\begin{align*}
+\hat{\theta} &= \min_\theta ||Y-Z\theta||_2 + \lambda^T|\theta| \\
+&= \min_\theta ||Y-XAA^{-1}\beta||_2 + \lambda^T|A^{-1}\beta| \\
+&= \min_\theta ||Y-X\beta||_2 + \lambda^T|A^{-1}\beta| \\
+&\ne \min_\beta ||Y-X\beta||_2 + \lambda^T|\beta|.
+\end{align*}
+
+Since the objective functions are different, the LASSO solutions should also be different. Hence LASSO is not invariant to standardization of data.
+
+
+# Part 2
+It suffices to solve this problem in two steps. We first show that the Lagrangian and constrained LASSO definitions are equivalent. We then show the correspondence between the $\beta_k$'s and $\beta_k^c$'s.
+
+We rewrite \[\min_\beta ||Y-X\beta||_2\ subject\ to\ \sum|\beta_k| < s,\]
+with a Lagrange multiplier as \[\min_\beta ||Y-X\beta||_2 + \lambda(\sum|\beta_k| - s). \]
+
+The above is then equivalent to
+\[\min_\beta ||Y-X\beta||_2 + \lambda\sum|\beta_k| - \lambda s. \]
+
+Since $\lambda s$ does not depend on $\beta$, the previous line is equivalent to
+\[\min_\beta ||Y-X\beta||_2 + \lambda\sum|\beta_k| \] when we minimize with respect to $\beta$, the lagrangian form of the LASSO.
+
+Now to show correspondence between $\beta_k$'s and $\beta_k^c$'s.
+
+
+\begin{align*}
+\min_\beta ||Y-X\beta||_2 + \lambda \sum_{j=1}^p |\beta_j| &= \min_\beta \sum_{i=1}^n (y_i - \beta_0 - \sum_{j=1}^p x_{ij}\beta_j)^2 + \lambda \sum_{j=1}^p |\beta_j|  \\
+&= \min_\beta \sum_{i=1}^n (y_i - \beta_0 - \sum_{j=1}^p \bar{x}_{j}\beta_j + \sum_{j=1}^p \bar{x}_{j}\beta_j \sum_{j=1}^p x_{ij}\beta_j)^2 + \lambda \sum_{j=1}^p |\beta_j| \\
+&= \min_\beta \sum_{i=1}^n (y_i - \beta_0 - \sum_{j=1}^p \bar{x}_{j}\beta_j -  \sum_{j=1}^p (x_{ij} - \bar{x}_j)\beta_j)^2 + \lambda \sum_{j=1}^p |\beta_j| \\
+&= \min_\beta \sum_{i=1}^n (y_i - \beta^c_0 - \sum_{j=1}^p x^c_{ij}\beta_j)^2 + \lambda \sum_{j=1}^p |\beta_j| \\
+&= \min_\beta ||Y-X\beta^c||_2 + \lambda \sum_{j=1}^p |\beta_j^c|.
+\end{align*}
+
+So that for $j = 1, 2, ..., p$, $\beta_j = \beta_j^c$. But for the intercept term, $\beta_0^c = \beta_0 - \sum_{j=1}^p \bar{x}_j\beta_j$.
+
+# Part 3
+## Part a
+
+```{r}
+
+set.seed(1030)
+# load spam data set
+raw <- read.table("spam.data.txt")
+# standardize columns
+raw[, 1 : 57] <- scale(raw[, 1 : 57])
+# factor the response
+raw[, 58] <- as.factor(raw[, 58])
+
+```
+
+## Part a
+
+The following code constructs a classification tree.
+
+```{r}
+
+# error storage
+preders <- rep(0, 10)
+# split into training and testing
+train_index <- createDataPartition(y = raw[, 58], times = 10, p = 0.9, list = FALSE)
+
+for(i in 1 : 10){
+  
+  # train/test sets
+  raw_train <- raw[train_index[, i], ]
+  raw_test <- raw[-train_index[, i], ]
+  
+  # initial fit
+  carfit <- rpart(V58 ~ ., data = raw_train, method = "class",
+                  control = list(cp = .Machine$double.eps, minsplit = 2, 
+                                 minbucket = 1))
+  
+  # make predictions
+  carpred <- predict(carfit, newdata = raw_test[, 1:57], type="class")
+  # confusion matrix and error rate
+  
+  conf <- table(raw_test[, 58], carpred)
+  preders[i] <- (conf[2]  + conf[3]) / (conf[1] + conf[4])
+  
+}
+
+paste0("The overall classification error is: ", mean(preders))
+
+```
+
+## Part b
+
+The following code constructs a classification tree similar to above, though we prune the tree with the complexity parameter $cp = 0.001$ during the cross-validation.
+
+```{r}
+
+# error storage
+preders <- rep(0, 10)
+# split into training and testing
+train_index <- createDataPartition(y = raw[, 58], times = 10, p = 0.9, list = FALSE)
+
+for(i in 1 : 10){
+  
+  # train/test sets
+  raw_train <- raw[train_index[, i], ]
+  raw_test <- raw[-train_index[, i], ]
+  
+  # initial fit
+  carfit <- rpart(V58 ~ ., data = raw_train, method = "class",
+                  control = list(cp = .Machine$double.eps, minsplit = 2, 
+                                 minbucket = 1))
+  # prune tree 
+  carfit_prune <- prune(carfit, cp = 0.001)
+  
+  # make predictions
+  carpred <- predict(carfit_prune, newdata = raw_test[, 1:57], type="class")
+  
+  # confusion matrix and error rate
+  conf <- table(raw_test[, 58], carpred)
+  preders[i] <- (conf[2]  + conf[3]) / (conf[1] + conf[4])
+  
+}
+
+paste0("The overall classification error is: ", mean(preders))
+
+```
+
+So we see there is an improvement after pruning the tree with $cp = 0.001$.
+
+## Part c
+
+The following code constructs a classification tree similar to above, though we prune the tree with the complexity parameter from the cross-validation steps that minimizes the cross-cross validation error.
+
+```{r}
+
+# error storage
+preders <- rep(0, 10)
+# split into training and testing
+train_index <- createDataPartition(y = raw[, 58], times = 10, p = 0.9, list = FALSE)
+
+for(i in 1 : 10){
+  
+  # train/test sets
+  raw_train <- raw[train_index[, i], ]
+  raw_test <- raw[-train_index[, i], ]
+  
+  # initial fit
+  carfit <- rpart(V58 ~ ., data = raw_train, method = "class",
+                  control = list(cp = .Machine$double.eps, minsplit = 2, 
+                                 minbucket = 1))
+  # find best cp value 
+  bestcp <- carfit$cptable[which.min(carfit$cptable[,"xerror"]),"CP"]
+  
+  # prune tree 
+  carfit_prune <- prune(carfit, cp = bestcp)
+  
+  # make predictions
+  carpred <- predict(carfit_prune, newdata = raw_test[, 1:57], type="class")
+  
+  # confusion matrix and error rate
+  conf <- table(raw_test[, 58], carpred)
+  preders[i] <- (conf[2]  + conf[3]) / (conf[1] + conf[4])
+  
+}
+
+paste0("The overall classification error is: ", mean(preders))
+
+
+```
+
+So we see there is more of an improvement using the complexity parameter that minimizes the classification error over just specifying the complexity parameter when pruning.
+
+Additionally, we can use a Random Forest procedure to further improve our erro rates.
+
+
+```{r}
+
+trc <- trainControl(method = "cv", number = 10)
+forfit <- train(V58 ~ ., data = raw, trControl = trc, method = "rf")
+forfit$resample
+
+```
+
+Our individual rates are the following.
+
+```{r}
+
+1 - forfit$resample[, 1]
+
+```
+
+And the overall error rate is the following.
+
+```{r}
+
+mean(1 - forfit$resample[, 1])
+
+```
+
+So we see that it is a larger improvement over just using CART.
+
+# Part 4
+
+The following code performs logistic regression with 10 cross fold validation and provides overall accuracy rates for each fold.
+
+```{r, warning=FALSE}
+
+trc <- trainControl(method = "cv", number = 10)
+logfit <- train(V58 ~ ., data = raw, trControl = trc, method = "glm",
+               family = binomial())  
+logfit$resample
+
+```
+Our individual error rates are the following.
+
+```{r}
+
+1 - logfit$resample[, 1]
+
+```
+
+And the overall error rate is the following.
+
+```{r}
+
+paste0("Overall error rate: ", 1 - logfit$results[, 2])
+
+```
+
+# Part 5
+
+The following code fits the logistic LASSO. We then extract the Lambda value with the minimum deviance from our cross validation runs. We use this Lambda to then make predictions. The resulting overall error rate is the following.
+
+```{r}
+
+x <- as.matrix(raw[, 1 : 57])
+y <- raw[, 58]
+
+lassofit <- cv.glmnet(x = as.matrix(x), y = y, nfolds = 10, type.measure = "deviance", alpha = 1, family = "binomial")
+
+preds <- predict(lassofit, as.matrix(x), s = "lambda.min", type = "class")
+
+paste0(" Overall error rate: ", 1 - sum(y == preds) / nrow(raw))
+
+```
+
+So the logistic LASSO does perform better than logistic regression.

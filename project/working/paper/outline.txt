@@ -1,0 +1,148 @@
+# summarize data
+
+## data handling
+
+    We used the resources in ARC to do most data processing. For the ACME data, it
+was not large enough that we could not do minor local processing, but for
+larger programs ARC was essential. For ACME we initially combined the http,
+device, and logon datasets together to get all of the timestamps consistent.
+the log entry in each data set was thrown away because while it is unique to a
+particular file it is not unique across files. this 'complete data' was further
+augmented with user role, there start date, and attrition, where this was based
+on if the user appeared in the most recent LDAP file. this is where most data
+proprocessing was done. On this entire dataframe, we added time dependent
+variables, such as weekday/weekend/holiday, after hours. Total machines in use,
+etc.
+    Since the DTT dataset was so much larger, we had to almost exclusively use
+ARC systems for processing this information. Again, we aggregated all of the
+data together as in above.  But to allow for local processing by team members,
+this dataframe was split into chunks to allow for more
+experimental/explorartory analysis. the chunks were approximately equal size
+and split over time. This allowed us to test scripts locally before submitted
+femote jobs that leveraged the ARC machines. Again, we added indicators to this
+total dataframe to indicate holidays, weekdays, after hours, etc. 
+    Once data these initial data frames were processed, we then created
+multiple summary data frames, such as total holdays, after hours, etc. how many
+things you download, how many emails you recive how many emails you send,
+things of this nature. This allowed us to get a high level picture on a user
+to get inital guesses for what's going on with them and what makes them
+different from the others. We would use this summary dataset to make
+exploratory statistical measures of stuff. from this inital view of the users,
+we were able to come up with other variables to include.
+    To process the consecutive logons/connects/etc any of the missing
+variables, we processed these entire dataframes and inserted the missing times
+using the users average. this was very computationally expesnive since it
+required multiple sorts of the entire dataset. but only needed to be done once.
+This was more of a nuesance since we never found anything interesting about it
+really. These observations were flagged so we did not lose this 'missing
+information'
+
+## variable creation
+
+    For the logon datasets, it was most natural to keep track of a users
+primary machine, that is the one that they logon the most too throughout these
+datasets. We also wanted to track how many different machines a user was logged
+into at a time, this was important for multiple reasons, like bot/malware
+installation things like that. We also made summary statistic variabels on the
+user logon information, things like mean median etc. But what was most
+interesting was creating a quick run variable and dual logon variables. We
+wanted to detect any spamming/malware/botnet traffic. We made time dependent
+variables to keep track of users who within a single day, logon to multiple
+machines quickly for less than a minute. We also kept track of users logging
+onto one machine and then logging onto another machine in a similar fashion. We
+also wanted to keep track of after business hours, and after hours. It is
+important to look at late night traffic, but we didn't want to be restricted by
+our choices of time, so we split this up into 6-12 and 12-5. This way we
+could differentiate the two kinds of traffic. It was very normal in both
+datasets for users to work after business hours and we wanted to detect this
+and not have it pollute users working way after hours as in 12-5 in the
+morning. The IT admins were most prevalent in logging onto multiple machines,
+since they do this as apart of their everyday responsibilities. Though
+nonITadmin users should havea much smaller number of different machines they
+yse.
+    for the http data set, we made similar indicators for after hours work. we
+also wanted to somehow characterize the acme dataset. there were multiple
+instances of keyword-website.com/keyword.something.else/etc. This made up a
+substantial proportion of the entire dataset, but was difficult to process. An
+obvious improvement would be some advanced text processing to keep track of
+this keyword-type HTTP traffic. We also kept track of indicators for popular
+social media, job search, and entertainment websites. While less important than
+the latter two, high proportions of social media as a persons traffic can be
+non professional behavior. Job searching is a definite indicator of someone
+potentially wanting to leave and should be monitored. as is online dating.
+entretainment websites like netflix, hulu, etc should also be tracked for
+obvious reasons. We also kept track of really quick web traffic. say searching
+more than 10 websites in under a minute. These quick web runs are very
+prevelant in the majority of users traffic. Especially towards 2011 in the
+data. Other variabels created were tracking the tlds of websites, that is
+.com/,net/etc. These could be useful indicators of someone using bittorrent
+websites or other nonsafe malicious sites. we created positive/negative/total
+sentiment scores for the websites as well
+    for usb traffic in ACME, the most obvious indicators were after hours 
+usage. This could be an indicator of a data breach or the like. Additionally if
+the machine is not the primary users. Although we did not have this problem in
+the ACME data set. It was common in the DTT data set. Additionally indicators
+were made for users who connect a usb to their primary machine, intermediately
+logon to another machine. this could be another example of a data breach. we
+also kept track of the average connection time of users also, though there were
+no immediate patterns here. There was a pretty even split of users who logged
+in and connected a usb in the morning and then disconnected when they left.
+there were also sporadic users too. but we were most interestesd in the after
+hours traffic again. for the dtt data, having the actual file information was
+most useful, we were then able to further create variables on file extension,
+and paid particular attention to .exe Windpws executable files, this is
+important for malware detection. In the file content. the first numbers
+FF**-** is the file signature, we first tried to pay particular attention to
+this information and make sure it matched the real file name. But these valeus
+are eassily scrambled and it wasn't worth the time to ensure this. we made
+sentiment scores for file content. We also searched for specific strings like
+malware, virus, etc and found the system administrators. Describe them later.
+We also kept track of usb connections and downloads from non primary machines
+and paid particular attention to mangerial machines
+    for email traffic, we again did similar things like emails at night how
+many machines you email people on etc. We also kept track of how many emails
+each user has. this way we could filter out 'work' email addresses and the
+'nonwork' user email addresses and get total counts for nonwork emails for
+users. we also did similar sentiment scores for these. we also kept track of
+email attachments and paid particular attention to nonwork email attachments.
+This is imporant for data security. 
+    For dtt we augmented these dataframes together with the psychometric scores
+    something something prince across each of these files
+    We also had such information as supervisor, business unit, etc
+So how could our variables be improved? for ACME, the keyword.website.org
+problem was difficult to solve. we weren't able to better track this sort of
+spam usage. We originally hypothesized that it is unique suers or this was the
+quick web runs but that was not the case. If we could have found a better
+indicator for this kind of behavior. Also the sentiment analysis could have
+been bettere executed. The largest difficult was the shear number of zero
+scores after filtering out dates and stopwords. It was also most
+computationally intensive across each data set because of the software
+packages. We also performed some LDA and tf_idf but these were harder measures
+to compare across users. text processing most difficult and computationally
+intensive part of project.
+
+# modeling
+
+## explanatory/predictive modeling
+
+We wanted to make good predictions of user attrition across several data sets.
+We didn't know what variables were most important so we wanted to use
+classification methods that do not necessarily get penalized by having multiple
+variables. We fit logistic LASSO, CART, and random forest models to the
+data.This way we could get comparitive measures between overfitting with bad
+variables or figure out which variables were most important and refit regular
+logistic models and cart models. Neural nets were not included because we their
+interpretation isn't helpful. We didn't want to bias our models with users who
+were fired months ago, so we fit 3 different models to each dataset separately.
+and then combined the datasets and fit a fourth model. We truncated and
+regenerated data at each attrition date to make  a compartive measure of user
+attrition, these users were then thrown out of the dataset. This way we would
+not bias our models. These models were fit with 10 fold cross validation at
+each iteration. Here are some plots of results. We see that most often the
+CART/random Forest have similar results which is to be expected. they also
+perform better than the logitic lasso in the mjaority of cases.
+    
+## model justification
+    
+     
+    

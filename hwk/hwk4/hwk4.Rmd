@@ -1,0 +1,59 @@
+---
+title: "Homework 4"
+subtitle: "STAT5525: Data Analytics"
+author: "Alexander Durbin"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.width = 6, fig.height = 4)
+```
+
+# Problem 3
+
+```{r}
+
+raw <- read.table("cereal.csv", header = FALSE)
+
+```
+
+## Part A
+
+We standardize the data and then fit 2-D multidimensional scaling.
+
+```{r}
+
+std_raw <- scale(raw)
+d <- dist(std_raw)
+fit_mds <- cmdscale(d, eig = TRUE, k = 2)
+x_mds <- fit_mds$points[,1]
+y_mds <- fit_mds$points[,2]
+plot(x_mds, y_mds, xlab = "Coordinate 1", ylab = "Coordinate 2", main = "Metric MDS")
+
+```
+
+## Part B
+
+We standardize the data and then fit 2-D principal components analysis. 
+
+```{r}
+
+std_raw <- scale(raw)
+fit_pca <- prcomp(std_raw, center = FALSE, scale. = FALSE)
+x_pca <- fit_pca$x[, 1]
+y_pca <- -fit_pca$x[, 2] # flip axis to match MDS figure
+plot(x_pca, y_pca, xlab = "Coordinate 1", ylab = "Coordinate 2", main = "Metric PCA")
+
+```
+
+## Part C
+
+We take the differences between the loadings from each method and see they are near 0, so the relative distances between these methods are the same. We conclude that Principal Components and Multidimensional Scaling are equivalent when Multidimensional Scaling uses inner product distances as in `cmdscale`.
+
+```{r}
+
+summary(x_pca - x_mds)
+summary(y_pca - y_mds)
+
+```
